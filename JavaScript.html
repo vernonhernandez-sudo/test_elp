@@ -8,13 +8,38 @@ var currentTimeZone = 'America/Los_Angeles';
 var activeStatusFilter = null;
 
 (function() {
+
   var stored = sessionStorage.getItem('crm_session');
-  if (stored) { 
-    SESSION_ID = stored; 
-    google.script.run.withSuccessHandler(function(u) { 
-      if (u && u.name) { currentUser = u; showAgent(); populateUser(); } 
-    }).getUserFromCache(SESSION_ID); 
-  }
+
+  if (!stored) return;
+
+  SESSION_ID = stored;
+
+  google.script.run
+    .withSuccessHandler(function(u) {
+
+      if (u && u.name) {
+
+        currentUser = u;
+
+        populateUser();
+
+        showAgent();
+
+      } else {
+
+        handleSessionExpired();
+
+      }
+
+    })
+    .withFailureHandler(function() {
+
+      handleSessionExpired();
+
+    })
+    .getUserFromCache(SESSION_ID);
+
 })();
 
 function showAgent() {
@@ -25,14 +50,124 @@ function showAgent() {
   m.style.height = '100vh'; 
   m.style.width = '100vw'; 
   m.style.background = 'linear-gradient(180deg, #800000 0%, #6b1010 8%, #999999 40%, #b0b0b0 70%, #e2e6ed 100%)';
+
   updateClock(); 
-  setInterval(updateClock, 1000); 
+  setInterval(updateClock, 1000);
+
+  // Start checking whether the user's session is still valid.
+  startSessionMonitoring();
+
   loadEntries();
+}
+
+
+/* =====================================================
+   SESSION MONITORING
+   PUT STEP 2 HERE
+   ===================================================== */
+
+var sessionCheckInterval = null;
+
+function startSessionMonitoring() {
+
+  if (sessionCheckInterval) {
+    clearInterval(sessionCheckInterval);
+  }
+
+  // Check the session every 60 seconds.
+  sessionCheckInterval = setInterval(function() {
+
+    if (!SESSION_ID) return;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+
+        if (!result || !result.success) {
+          handleSessionExpired();
+        }
+
+      })
+      .withFailureHandler(function() {
+
+        // Do nothing for temporary server/network errors.
+
+      })
+      .validateSession(SESSION_ID);
+
+  }, 60000);
+}
+
+
+function stopSessionMonitoring() {
+
+  if (sessionCheckInterval) {
+    clearInterval(sessionCheckInterval);
+    sessionCheckInterval = null;
+  }
+}
+
+
+function handleSessionExpired() {
+
+  stopSessionMonitoring();
+
+  SESSION_ID = null;
+  currentUser = null;
+
+  sessionStorage.removeItem('crm_session');
+
+  document.getElementById('agentScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+
+  var error = document.getElementById('loginError');
+
+  if (error) {
+    error.textContent =
+      'Your session has expired. Please log in again during your next available shift.';
+
+    error.style.display = 'block';
+  }
+
+  var username =
+    document.getElementById('username');
+
+  var password =
+    document.getElementById('password');
+
+  if (username) username.value = '';
+  if (password) password.value = '';
+}
+
+// ========== APPS SCRIPT ERROR HANDLER ==========
+
+function handleServerError(error, context) {
+
+  console.error(
+    'Apps Script error [' + (context || 'Unknown') + ']:',
+    error
+  );
+
+  var message = 'Something went wrong. Please try again.';
+
+  if (error && error.message) {
+    message = error.message;
+  }
+
+  showToast(message, 'error');
 }
 
 function updateClock() { 
   var d = new Date(), el = document.getElementById('currentDate'); 
-  if (el) el.textContent = d.toLocaleString('en-US', {timeZone: currentTimeZone, weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'}); 
+
+  if (el) el.textContent = d.toLocaleString('en-US', {
+    timeZone: currentTimeZone,
+    weekday:'long',
+    year:'numeric',
+    month:'long',
+    day:'numeric',
+    hour:'2-digit',
+    minute:'2-digit'
+  }); 
 }
 
 function populateUser() {
@@ -45,34 +180,96 @@ function populateUser() {
 }
 
 function handleLogin(e) {
-  e.preventDefault(); 
-  var u = document.getElementById('username').value.trim(), 
-      p = document.getElementById('password').value, 
-      b = document.getElementById('loginButton'), 
-      er = document.getElementById('loginError');
-  er.style.display = 'none'; 
-  if (!u || !p) { er.textContent = 'Please enter username and password.'; er.style.display = 'block'; return; }
-  b.disabled = true; b.textContent = 'Signing in...';
-  google.script.run.withSuccessHandler(function(r) { 
-    b.disabled = false; b.textContent = 'Sign In';
-    if (r.success) { 
-      SESSION_ID = r.sessionId; 
-      currentUser = r.user; 
-      sessionStorage.setItem('crm_session', SESSION_ID); 
-      populateUser(); 
-      showAgent(); 
-    } else { 
-      er.textContent = r.message; er.style.display = 'block'; 
-    } 
-  }).loginUser(u, p);
+
+  e.preventDefault();
+
+  var u = document.getElementById('username').value.trim();
+  var p = document.getElementById('password').value;
+
+  var b = document.getElementById('loginButton');
+  var er = document.getElementById('loginError');
+
+  er.style.display = 'none';
+
+  if (!u || !p) {
+
+    er.textContent =
+      'Please enter username and password.';
+
+    er.style.display = 'block';
+
+    return;
+  }
+
+  b.disabled = true;
+  b.textContent = 'Signing in...';
+
+  google.script.run
+
+    .withSuccessHandler(function(r) {
+
+      b.disabled = false;
+      b.textContent = 'Sign In';
+
+      if (r.success) {
+
+        SESSION_ID = r.sessionId;
+
+        currentUser = r.user;
+
+        sessionStorage.setItem(
+          'crm_session',
+          SESSION_ID
+        );
+
+        populateUser();
+
+        showAgent();
+
+      } else {
+
+        er.textContent = r.message;
+        er.style.display = 'block';
+
+      }
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      b.disabled = false;
+      b.textContent = 'Sign In';
+
+      er.textContent =
+        'Unable to connect to the server. Please try again.';
+
+      er.style.display = 'block';
+
+    })
+
+    .loginUser(u, p);
 }
 
-function handleLogout() { 
-  if (SESSION_ID) google.script.run.logoutUser(SESSION_ID); 
-  sessionStorage.removeItem('crm_session'); 
-  SESSION_ID = null; currentUser = null; 
-  document.getElementById('agentScreen').style.display = 'none'; 
-  document.getElementById('loginScreen').style.display = 'block'; 
+function handleLogout() {
+
+  if (SESSION_ID) {
+    google.script.run.logoutUser(SESSION_ID);
+  }
+
+  stopSessionMonitoring();
+
+  sessionStorage.removeItem('crm_session');
+
+  SESSION_ID = null;
+  currentUser = null;
+
+  document.getElementById('agentScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+
+  document.getElementById('loginError').style.display = 'none';
 }
 
 function showToast(message, type) { 
@@ -157,23 +354,100 @@ function submitEntry(e) {
   var er = document.getElementById('entryError'); 
   er.style.display = 'none'; 
   if (!an || !bk || !is) { er.textContent = 'Author Name, Book, and ISBN are required.'; er.style.display = 'block'; isSubmitting = false; return; } 
-  google.script.run.withSuccessHandler(function(r) { 
-    isSubmitting = false; 
-    if (r.success) { showToast('Entry saved!', 'success'); closeEntryModal(); loadEntries(); } 
-    else { er.textContent = r.message; er.style.display = 'block'; } 
-  }).addEntry(SESSION_ID, {authorName:an, phones:ph.join(', '), email:em, book:bk, isbn:is, address:ad}); 
+  google.script.run
+
+  .withSuccessHandler(function(r) {
+
+    isSubmitting = false;
+
+    if (r && r.success) {
+
+      showToast('Entry saved!', 'success');
+
+      closeEntryModal();
+
+      loadEntries();
+
+    } else {
+
+      er.textContent =
+        (r && r.message) || 'Unable to save entry.';
+
+      er.style.display = 'block';
+
+    }
+
+  })
+
+  .withFailureHandler(function(error) {
+
+    isSubmitting = false;
+
+    er.textContent =
+      'Unable to save entry. Please try again.';
+
+    er.style.display = 'block';
+
+    handleServerError(error, 'addEntry');
+
+  })
+
+  .addEntry(SESSION_ID, {
+    authorName: an,
+    phones: ph.join(', '),
+    email: em,
+    book: bk,
+    isbn: is,
+    address: ad
+  }); 
 }
 
 // ========== TABLE ==========
 var allEntries = []; 
 var columnFilters = {};
 
-function loadEntries() { 
-  if (!SESSION_ID) return; 
-  document.getElementById('entriesTableBody').innerHTML = '<tr><td colspan="5" style="padding:60px;text-align:center;color:#aaa;">Loading...</td></tr>'; 
-  google.script.run.withSuccessHandler(function(r) { 
-    if (r && r.success) { allEntries = r.entries; buildFilterOptions(); filterTable(); updateSummaryCards(r.summary); } 
-  }).getEntries(SESSION_ID); 
+function loadEntries(callback) {
+  if (!SESSION_ID) return;
+
+  document.getElementById('entriesTableBody').innerHTML =
+    '<tr><td colspan="5" style="padding:60px;text-align:center;color:#aaa;">Loading...</td></tr>';
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+
+      if (r && r.success) {
+
+        allEntries = r.entries;
+
+        buildFilterOptions();
+        filterTable();
+        updateSummaryCards(r.summary);
+
+        // Run callback ONLY after allEntries
+        // has been updated with fresh server data.
+        if (typeof callback === 'function') {
+          callback();
+        }
+
+      } else {
+
+        showToast(
+          (r && r.message) || 'Unable to load entries.',
+          'error'
+        );
+      }
+
+    })
+    .withFailureHandler(function(error) {
+
+      console.error('loadEntries failed:', error);
+
+      showToast(
+        'Unable to load entries. Please try again.',
+        'error'
+      );
+    })
+    .getEntries(SESSION_ID);
 }
 
 function renderTable(entries) { 
@@ -193,7 +467,7 @@ function renderTable(entries) {
       '<td style="padding:9px 12px;color:#555;text-align:center;">'+escapeHtml(e.book)+'</td>' +
       '<td style="padding:9px 12px;color:#555;text-align:center;">'+escapeHtml(e.isbn)+'</td>' +
       '<td style="padding:9px 12px;color:#555;text-align:center;">'+(escapeHtml(e.assignedAgentName)||'<span style="color:#999;">Unassigned</span>')+'</td>' +
-      '<td style="padding:9px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;color:'+sc+';background:'+sb+';">'+(e.status||'None')+'</span></td></tr>'; 
+      '<td style="padding:9px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;color:'+sc+';background:'+sb+';">'+(getStatusLabel(e.status))+'</span></td></tr>'; 
   }); 
   tb.innerHTML = h; 
 }
@@ -321,44 +595,181 @@ function toggleEditMode() {
 
 function cancelEdit() { setViewMode(); }
 
-function saveEntryEdits() { 
-  if (!selectedEntryId) return; 
-  google.script.run.withSuccessHandler(function(r) { 
-    if (r.success) { showToast('Updated!', 'success'); setViewMode(); selectEntry(selectedEntryId); loadEntries(); } 
-    else { showToast(r.message, 'error'); } 
-  }).updateEntry(SESSION_ID, selectedEntryId, {
-    authorName: document.getElementById('detailAuthorNameEdit').value.trim(),
-    phones: document.getElementById('detailPhonesEdit').value.trim(),
-    email: document.getElementById('detailEmailEdit').value.trim(),
-    book: document.getElementById('detailBookEdit').value.trim(),
-    isbn: document.getElementById('detailISBNEdit').value.trim(),
-    address: document.getElementById('detailAddressEdit').value.trim()
-  }); 
+function saveEntryEdits() {
+  if (!selectedEntryId) return;
+
+  var entryId = selectedEntryId;
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+
+      if (r && r.success) {
+
+        showToast('Updated!', 'success');
+        setViewMode();
+
+        // Reload entries first.
+        // selectEntry() will run after allEntries has fresh data.
+        loadEntries(function() {
+          selectEntry(entryId);
+        });
+
+      } else {
+
+        showToast(
+          (r && r.message) || 'Unable to update the entry.',
+          'error'
+        );
+      }
+
+    })
+    .withFailureHandler(function(error) {
+
+      console.error('saveEntryEdits failed:', error);
+
+      showToast(
+        'Unable to update the entry. Please try again.',
+        'error'
+      );
+
+    })
+    .updateEntry(SESSION_ID, entryId, {
+      authorName: document.getElementById('detailAuthorNameEdit').value.trim(),
+      phones: document.getElementById('detailPhonesEdit').value.trim(),
+      email: document.getElementById('detailEmailEdit').value.trim(),
+      book: document.getElementById('detailBookEdit').value.trim(),
+      isbn: document.getElementById('detailISBNEdit').value.trim(),
+      address: document.getElementById('detailAddressEdit').value.trim()
+    });
 }
 
 function deleteCurrentEntry() { 
   showConfirm('Delete', 'Delete this entry?', function() { 
-    google.script.run.withSuccessHandler(function(r) { 
-      if (r.success) { showToast('Deleted.', 'success'); loadEntries(); document.getElementById('detailEmpty').style.display = 'block'; document.getElementById('detailContent').style.display = 'none'; } 
-      else { showToast(r.message, 'error'); } 
-    }).deleteEntry(SESSION_ID, selectedEntryId); 
+    google.script.run
+
+  .withSuccessHandler(function(r) {
+
+    if (r && r.success) {
+
+      showToast('Deleted.', 'success');
+
+      loadEntries();
+
+      document.getElementById('detailEmpty').style.display = 'block';
+      document.getElementById('detailContent').style.display = 'none';
+
+    } else {
+
+      showToast(
+        (r && r.message) || 'Unable to delete entry.',
+        'error'
+      );
+
+    }
+
+  })
+
+  .withFailureHandler(function(error) {
+
+    handleServerError(error, 'deleteEntry');
+
+  })
+
+  .deleteEntry(
+    SESSION_ID,
+    selectedEntryId
+  ); 
   }, '#d32f2f'); 
 }
 
-function changeEntryStatus() { 
-  google.script.run.withSuccessHandler(function(r) { 
-    if (r.success) { updateStatusBadge(document.getElementById('detailStatusSelect').value); showToast('Updated!', 'success'); loadEntries(); } 
-  }).updateEntryStatus(SESSION_ID, selectedEntryId, document.getElementById('detailStatusSelect').value); 
+function changeEntryStatus() {
+  var status = document.getElementById('detailStatusSelect').value;
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+
+      if (r && r.success) {
+        updateStatusBadge(status);
+        showToast('Updated!', 'success');
+        loadEntries();
+
+      } else {
+        showToast(
+          (r && r.message) || 'Unable to update the status.',
+          'error'
+        );
+      }
+
+    })
+    .withFailureHandler(function(error) {
+
+      console.error('changeEntryStatus failed:', error);
+
+      showToast(
+        'Unable to update the status. Please try again.',
+        'error'
+      );
+
+    })
+    .updateEntryStatus(
+      SESSION_ID,
+      selectedEntryId,
+      status
+    );
 }
 
-function updateStatusBadge(status) { 
-  var b = document.getElementById('detailStatus'); 
-  if (!status || status === '') { b.style.background = '#f5f5f5'; b.style.color = '#999'; b.textContent = 'None'; } 
-  else if (status === 'Sold') { b.style.background = '#e8f5e9'; b.style.color = '#2e7d32'; } 
-  else if (status === 'DNC') { b.style.background = '#ffebee'; b.style.color = '#c62828'; } 
-  else if (status === 'VM') { b.style.background = '#fce4ec'; b.style.color = '#c2185b'; } 
-  else { b.style.background = '#fff3e0'; b.style.color = '#e67e22'; } 
-  b.textContent = status || 'None'; 
+function getStatusLabel(status) {
+  switch (status) {
+    case 'Pipe':
+      return 'Pipe';
+
+    case 'Exclusive':
+      return 'Exclusive';
+
+    case 'VM':
+      return 'VM - Voicemail';
+
+    case 'DNC':
+      return 'DNC - Do Not Call';
+
+    case 'Sold':
+      return 'Sold';
+
+    case '':
+    case null:
+    case undefined:
+      return 'None';
+
+    default:
+      return status;
+  }
+}
+
+function updateStatusBadge(status) {
+  var b = document.getElementById('detailStatus');
+
+  if (!status || status === '') {
+    b.style.background = '#f5f5f5';
+    b.style.color = '#999';
+  }
+  else if (status === 'Sold') {
+    b.style.background = '#e8f5e9';
+    b.style.color = '#2e7d32';
+  }
+  else if (status === 'DNC') {
+    b.style.background = '#ffebee';
+    b.style.color = '#c62828';
+  }
+  else if (status === 'VM') {
+    b.style.background = '#fce4ec';
+    b.style.color = '#c2185b';
+  }
+  else {
+    b.style.background = '#fff3e0';
+    b.style.color = '#e67e22';
+  }
+
+  b.textContent = getStatusLabel(status);
 }
 
 // ========== REMARKS & ACTIVITY ==========
@@ -378,7 +789,13 @@ function loadRemarksOnly() {
       h += '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #e8dcc8;"><div style="display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:600;color:#5d4e37;">'+escapeHtml(r.userName)+'</span><span style="font-size:9px;color:#b8a88a;">'+t.toLocaleString()+'</span></div><div style="font-size:12px;color:#3d3223;">'+escapeHtml(r.remark)+'</div></div>'; 
     }); 
     c.innerHTML = h; 
-  }).getRemarks(selectedEntryId); 
+  })
+.withFailureHandler(function(error) {
+
+  handleServerError(error, 'getRemarks');
+
+})
+.getRemarks(selectedEntryId); 
 }
 
 function loadEntryActivity() { 
@@ -393,15 +810,58 @@ function loadEntryActivity() {
       h += '<div style="background:'+bg+';border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid '+(item.type==='activity'?'#c8d6e5':'#e8dcc8')+';"><div style="display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:600;color:#5d4e37;">'+escapeHtml(item.userName)+'</span><span style="font-size:9px;color:#b8a88a;">'+t.toLocaleString()+'</span></div><div style="font-size:12px;color:#3d3223;">'+item.content+'</div></div>'; 
     }); 
     c.innerHTML = h; 
-  }).getEntryActivity(selectedEntryId); 
+  })
+.withFailureHandler(function(error) {
+
+  handleServerError(error, 'getEntryActivity');
+
+})
+.getEntryActivity(selectedEntryId); 
 }
 
-function addRemark() { 
-  var txt = document.getElementById('remarkInput').value.trim(); 
-  if (!txt) return; 
-  google.script.run.withSuccessHandler(function(r) { 
-    if (r.success) { document.getElementById('remarkInput').value = ''; if (showingAllActivity) loadEntryActivity(); else loadRemarksOnly(); } 
-  }).addRemark(SESSION_ID, selectedEntryId, txt); 
+function addRemark() {
+
+  var txt =
+    document.getElementById('remarkInput').value.trim();
+
+  if (!txt) return;
+
+  google.script.run
+
+    .withSuccessHandler(function(r) {
+
+      if (r && r.success) {
+
+        document.getElementById('remarkInput').value = '';
+
+        if (showingAllActivity) {
+          loadEntryActivity();
+        } else {
+          loadRemarksOnly();
+        }
+
+      } else {
+
+        showToast(
+          (r && r.message) || 'Unable to add remark.',
+          'error'
+        );
+
+      }
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      handleServerError(error, 'addRemark');
+
+    })
+
+    .addRemark(
+      SESSION_ID,
+      selectedEntryId,
+      txt
+    );
 }
 
 function escapeHtml(t) { if (!t) return ''; var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
