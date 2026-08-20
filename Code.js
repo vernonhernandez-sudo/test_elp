@@ -114,10 +114,10 @@ function deleteEntry(sessionId, entryId) {
 function getEntries(sessionId) {
   try {
     var u=getUserFromCache(sessionId);
-    if(!u)return{success:false,entries:[],summary:{pipeCount:0,soldCount:0,totalAssigned:0}};
+    if(!u)return{success:false,entries:[],summary:{pipeCount:0,vmCount:0,dncCount:0,soldCount:0,totalAssigned:0}};
     var ss=SpreadsheetApp.openById(SHEET_ID);
     var ed=ss.getSheetByName('Entries').getDataRange().getValues();
-    if(ed.length<=1)return{success:true,entries:[],summary:{pipeCount:0,soldCount:0,totalAssigned:0}};
+    if(ed.length<=1)return{success:true,entries:[],summary:{pipeCount:0,vmCount:0,dncCount:0,soldCount:0,totalAssigned:0}};
     ed.shift();
     var ad=ss.getSheetByName('Agents').getDataRange().getValues();ad.shift();
     var am={};
@@ -143,11 +143,13 @@ function getEntries(sessionId) {
       entries:entries,
       summary:{
         pipeCount:entries.filter(function(e){return e.status==='Pipe';}).length,
+        vmCount:entries.filter(function(e){return e.status==='VM';}).length,
+        dncCount:entries.filter(function(e){return e.status==='DNC';}).length,
         soldCount:entries.filter(function(e){return e.status==='Sold';}).length,
         totalAssigned:entries.length
       }
     };
-  } catch(e){return{success:false,entries:[],summary:{pipeCount:0,soldCount:0,totalAssigned:0}};}
+  } catch(e){return{success:false,entries:[],summary:{pipeCount:0,vmCount:0,dncCount:0,soldCount:0,totalAssigned:0}};}
 }
 
 // ========== STATUS MANAGEMENT ==========
