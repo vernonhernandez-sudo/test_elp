@@ -850,22 +850,65 @@ function getEntries(sessionId) {
 // ========== STATUS MANAGEMENT ==========
 function updateEntryStatus(sessionId, entryId, newStatus) {
   try { 
-    var u=getUserFromCache(sessionId); 
-    if(!u)return{success:false,message:'Session expired.'}; 
-    var validStatuses=['','Pipe','Exclusive','Sold','DNC','VM']; 
-    if(validStatuses.indexOf(newStatus)===-1)return{success:false,message:'Invalid status.'}; 
-    var s=SpreadsheetApp.openById(SHEET_ID).getSheetByName('Entries'); 
-    var d=s.getDataRange().getValues(); 
-    for(var i=1;i<d.length;i++){
-      if(d[i][0]==entryId){
-        s.getRange(i+1,9).setValue(newStatus);
-        logActivity(u.id,u.name,'Status #'+entryId+' to '+(newStatus||'None'));
-        addSystemRemark(entryId,u.name,'Status changed to '+(newStatus||'None'));
-        return{success:true,message:'Updated!'};
+    var u = getUserFromCache(sessionId); 
+
+    if (!u) {
+      return {
+        success: false,
+        message: 'Session expired.'
+      };
+    }
+
+    var validStatuses = ['', 'Pipe', 'Exclusive', 'Sold', 'DNC', 'VM'];
+
+    if (validStatuses.indexOf(newStatus) === -1) {
+      return {
+        success: false,
+        message: 'Invalid status.'
+      };
+    }
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var s = ss.getSheetByName('Entries');
+    var d = s.getDataRange().getValues(); 
+
+    for (var i = 1; i < d.length; i++) {
+      if (d[i][0] == entryId) {
+
+        s.getRange(i + 1, 9).setValue(newStatus);
+
+        logActivity(
+          u.id,
+          u.name,
+          'Status #' + entryId + ' to ' + (newStatus || 'None')
+        );
+
+        addSystemRemark(
+          entryId,
+          u.name,
+          'Status changed to ' + (newStatus || 'None')
+        );
+
+        return {
+          success: true,
+          message: 'Updated!'
+        };
       }
-    } 
-    return{success:false,message:'Not found.'}; 
-  } catch(e){return{success:false,message:'Error'};}
+    }
+
+    return {
+      success: false,
+      message: 'Not found.'
+    };
+
+  } catch (e) {
+    console.error('updateEntryStatus error:', e);
+
+    return {
+      success: false,
+      message: 'Unable to update status.'
+    };
+  }
 }
 
 // ========== REMARKS ==========

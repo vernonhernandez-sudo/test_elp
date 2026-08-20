@@ -682,20 +682,22 @@ function deleteCurrentEntry() {
   }, '#d32f2f'); 
 }
 
-function changeEntryStatus() {
-  var status = document.getElementById('detailStatusSelect').value;
+function changeEntryStatus() { 
+  var newStatus = document.getElementById('detailStatusSelect').value;
 
   google.script.run
-    .withSuccessHandler(function(r) {
+    .withSuccessHandler(function(r) { 
 
-      if (r && r.success) {
-        updateStatusBadge(status);
-        showToast('Updated!', 'success');
+      if (r && r.success) { 
+        updateStatusBadge(newStatus); 
+        showToast('Status updated!', 'success');
+
+        // Reload the entries so the summary cards update
         loadEntries();
 
       } else {
         showToast(
-          (r && r.message) || 'Unable to update the status.',
+          (r && r.message) ? r.message : 'Failed to update status.',
           'error'
         );
       }
@@ -703,19 +705,19 @@ function changeEntryStatus() {
     })
     .withFailureHandler(function(error) {
 
-      console.error('changeEntryStatus failed:', error);
+      console.error('changeEntryStatus error:', error);
 
       showToast(
-        'Unable to update the status. Please try again.',
+        'Server error while updating status.',
         'error'
       );
 
     })
     .updateEntryStatus(
-      SESSION_ID,
-      selectedEntryId,
-      status
-    );
+      SESSION_ID, 
+      selectedEntryId, 
+      newStatus
+    ); 
 }
 
 function getStatusLabel(status) {
