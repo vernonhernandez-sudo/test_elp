@@ -12,14 +12,14 @@ var activeStatusFilter = null;
   if (stored) { 
     SESSION_ID = stored; 
     google.script.run.withSuccessHandler(function(u) { 
-      if (u && u.name) { currentUser = u; showMain(); populateUser(); } 
+      if (u && u.name) { currentUser = u; showAgent(); populateUser(); } 
     }).getUserFromCache(SESSION_ID); 
   }
 })();
 
-function showMain() {
+function showAgent() {
   document.getElementById('loginScreen').style.display = 'none';
-  var m = document.getElementById('mainScreen'); 
+  var m = document.getElementById('agentScreen'); 
   m.style.display = 'flex'; 
   m.style.flexDirection = 'column'; 
   m.style.height = '100vh'; 
@@ -60,7 +60,7 @@ function handleLogin(e) {
       currentUser = r.user; 
       sessionStorage.setItem('crm_session', SESSION_ID); 
       populateUser(); 
-      showMain(); 
+      showAgent(); 
     } else { 
       er.textContent = r.message; er.style.display = 'block'; 
     } 
@@ -71,7 +71,7 @@ function handleLogout() {
   if (SESSION_ID) google.script.run.logoutUser(SESSION_ID); 
   sessionStorage.removeItem('crm_session'); 
   SESSION_ID = null; currentUser = null; 
-  document.getElementById('mainScreen').style.display = 'none'; 
+  document.getElementById('agentScreen').style.display = 'none'; 
   document.getElementById('loginScreen').style.display = 'block'; 
 }
 
