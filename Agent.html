@@ -71,8 +71,9 @@
   <div id="avatar" style="width:42px;height:42px;background:#800000;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:15px;">--</div>
   <div style="flex:1;"><div id="userName" style="font-size:14px;font-weight:600;color:#1a1a1a;">Loading...</div><div id="userEmail" style="font-size:11px;color:#777;"></div></div>
   <div style="display:flex;gap:8px;">
-    <div class="glass-card" style="padding:8px 14px;text-align:center;min-width:60px;">
-    <div id="totalCount" onclick="filterByStatus('Total')" style="font-size:20px;font-weight:700;color:#800000;">0</div><div style="font-size:9px;color:#888;">Total</div></div>
+    <!-- <div class="glass-card" style="padding:8px 14px;text-align:center;min-width:60px;">
+    <div id="totalCount" onclick="filterByStatus('Total')" style="font-size:20px;font-weight:700;color:#800000;">0</div><div style="font-size:9px;color:#888;">Total</div></div> -->
+    <div id="totalCard" onclick="filterByStatus('Total')" class="glass-card" style="padding:8px 14px;text-align:center;cursor:pointer;min-width:60px;"><div id="totalCount" style="font-size:20px;font-weight:700;color:#800000;">0</div><div style="font-size:9px;color:#888;">Total</div></div>
     <div id="pipeCard" onclick="filterByStatus('Pipe')" class="glass-card" style="padding:8px 14px;text-align:center;cursor:pointer;min-width:60px;"><div id="pipeCount" style="font-size:20px;font-weight:700;color:#e67e22;">0</div><div style="font-size:9px;color:#888;">Pipe</div></div>
     <div id="vmCard" onclick="filterByStatus('VM')" class="glass-card" style="padding:8px 14px;text-align:center;cursor:pointer;min-width:60px;"><div id="vmCount" style="font-size:20px;font-weight:700;color:#3498db;">0</div><div style="font-size:9px;color:#888;">VM</div></div>
     <div id="dncCard" onclick="filterByStatus('DNC')" class="glass-card" style="padding:8px 14px;text-align:center;cursor:pointer;min-width:60px;"><div id="dncCount" style="font-size:20px;font-weight:700;color:#e74c3c;">0</div><div style="font-size:9px;color:#888;">DNC</div></div>
