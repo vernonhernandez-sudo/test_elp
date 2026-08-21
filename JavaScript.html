@@ -540,6 +540,11 @@ function filterByStatus(status) {
   filterTable(); 
 }
 
+function filterByTotal() {
+  activeStatusFilter = null;
+  filterTable();
+}
+
 // ========== DETAIL PANEL ==========
 var selectedEntryId = null; 
 var selectedEntryData = null; 
