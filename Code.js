@@ -480,9 +480,8 @@ function getEntryById(entryId) {
 
 // ========== ENTRY MANAGEMENT (Preventing duplicate Entry IDs) ==========
 function addEntry(sessionId, entryData) {
-  var lock = LockService.getScriptLock();
-
   try {
+
     var user = getUserFromCache(sessionId);
 
     if (!user) {
@@ -492,6 +491,10 @@ function addEntry(sessionId, entryData) {
       };
     }
 
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Entries');
+    var agentsSheet = ss.getSheetByName('Agents');
+
     if (!entryData.authorName || !entryData.book || !entryData.isbn) {
       return {
         success: false,
@@ -499,54 +502,62 @@ function addEntry(sessionId, entryData) {
       };
     }
 
-    // Prevent two users from generating the same Entry ID
-    lock.waitLock(10000);
+    // Find the role of the person who mined the lead
+    var userRole = '';
 
-    var ss = SpreadsheetApp.openById(SHEET_ID);
-    var sheet = ss.getSheetByName('Entries');
+    var agents = agentsSheet.getDataRange().getValues();
 
-    if (!sheet) {
-      return {
-        success: false,
-        message: 'Entries sheet not found.'
-      };
+    for (var i = 1; i < agents.length; i++) {
+      if (agents[i][0] == user.id) {
+        userRole = agents[i][7]
+          ? agents[i][7].toString().trim()
+          : '';
+        break;
+      }
     }
 
     var data = sheet.getDataRange().getValues();
 
-    // Find the highest existing Entry ID
-    var maxId = 0;
+    // Generate a unique ID
+    var newEntryId = generateEntryId(data);
 
-    for (var i = 1; i < data.length; i++) {
-      var existingId = Number(data[i][0]);
+    /*
+     * Initial status:
+     *
+     * Admin / Sales Partner mining their own lead
+     *     → Exclusive
+     *
+     * Lead Gen Specialist
+     *     → No Status
+     *     → System distributes it
+     */
+    var initialStatus = '';
 
-      if (!isNaN(existingId) && existingId > maxId) {
-        maxId = existingId;
-      }
+    if (
+      userRole === 'Admin' ||
+      userRole === 'Sales Partner'
+    ) {
+      initialStatus = 'Exclusive';
     }
 
-    // Next ID is always higher than every existing ID
-    var newEntryId = maxId + 1;
-
+    // Add the new entry
     sheet.appendRow([
-      newEntryId,
-      entryData.authorName,
-      entryData.phones || '',
-      entryData.email || '',
-      entryData.book,
-      entryData.isbn,
-      entryData.address || '',
-      '',
-      '',
-      new Date().toISOString(),
-      'No',
-      'No'
+      newEntryId,                  // A - ID
+      entryData.authorName,        // B - Author
+      entryData.phones || '',      // C - Phones
+      entryData.email || '',       // D - Email
+      entryData.book,              // E - Book
+      entryData.isbn,              // F - ISBN
+      entryData.address || '',     // G - Address
+      '',                          // H - Assigned Agent
+      initialStatus,               // I - Status
+      new Date().toISOString(),    // J - Created/Assigned At
+      'No',                        // K
+      'No',                        // L
+      user.id                      // M - Mined By
     ]);
 
     SpreadsheetApp.flush();
-
-    // Release the lock after the ID has been safely created
-    lock.releaseLock();
 
     logActivity(
       user.id,
@@ -554,8 +565,15 @@ function addEntry(sessionId, entryData) {
       'Created entry #' + newEntryId + ': ' + entryData.authorName
     );
 
-    // Auto-distribute to available agent
-    distributeNewEntry(newEntryId);
+    /*
+     * Only Lead Gen Specialist leads are automatically distributed.
+     *
+     * Admin and Sales Partner leads remain with the miner
+     * and start as Exclusive.
+     */
+    if (userRole === 'Lead Gen Specialist') {
+      distributeNewEntry(newEntryId);
+    }
 
     return {
       success: true,
@@ -565,14 +583,11 @@ function addEntry(sessionId, entryData) {
 
   } catch (e) {
 
-    // Always release the lock if an error occurs
-    try {
-      lock.releaseLock();
-    } catch (lockError) {}
+    console.error('addEntry error:', e);
 
     return {
       success: false,
-      message: 'Error: ' + e.toString()
+      message: 'Unable to add entry.'
     };
   }
 }
