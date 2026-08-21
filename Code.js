@@ -150,15 +150,9 @@ function isShiftRestrictedRole(role) {
 function loginUser(username, password) {
 
   if (!username || !password) {
-    return { 
-      success: true, 
-      sessionId: sessionId, 
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      } 
+    return {
+      success: false,
+      message: 'Username and password required.'
     };
   }
 
@@ -204,12 +198,12 @@ function loginUser(username, password) {
           ? row[7].toString().trim()
           : '';
 
-        var user = { 
-          id: row[0], 
-          username: row[1], 
-          name: row[3], 
+        var user = {
+          id: row[0],
+          username: row[1],
+          name: row[3],
           email: row[4],
-          role: row[7] ? row[7].toString().trim() : ''
+          role: role
         };
 
         /*
@@ -482,21 +476,6 @@ function getEntryById(entryId) {
   }
 
   return null;
-} 
-
-// ========== UNIQUE ENTRY ID ==========
-function generateEntryId(data) {
-  var maxId = 0;
-
-  for (var i = 1; i < data.length; i++) {
-    var id = Number(data[i][0]);
-
-    if (!isNaN(id) && id > maxId) {
-      maxId = id;
-    }
-  }
-
-  return maxId + 1;
 }
 
 // ========== ENTRY MANAGEMENT (Preventing duplicate Entry IDs) ==========
@@ -803,19 +782,19 @@ function getEntries(sessionId) {
       }
 
       entries.push({
-        id: ed[i][0],
-        authorName: ed[i][1] || '',
-        phones: ed[i][2] || '',
-        email: ed[i][3] || '',
-        book: ed[i][4] || '',
-        isbn: ed[i][5] || '',
-        address: ed[i][6] || '',
-        assignedAgentId: ed[i][7],
-        assignedAgentName: am[ed[i][7]] || 'Unassigned',
-        status: ed[i][8] || '',
-        createdAt: ed[i][9] || '',
-        minedById: ed[i][12] || ''
-      });
+      id: ed[i][0],
+      authorName: ed[i][1] || '',
+      phones: ed[i][2] || '',
+      email: ed[i][3] || '',
+      book: ed[i][4] || '',
+      isbn: ed[i][5] || '',
+      address: ed[i][6] || '',
+      assignedAgentId: ed[i][7],
+      assignedAgentName: am[ed[i][7]] || 'Unassigned',
+      status: ed[i][8] || '',
+      createdAt: ed[i][9] || '',
+      minedById: ed[i][12] || ''
+    });
 
     }
 
