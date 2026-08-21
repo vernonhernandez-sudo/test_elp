@@ -651,7 +651,7 @@ function selectEntry(entryId) {
   document.getElementById('detailAddressEdit').value = selectedEntryData.address || '';
   document.getElementById('detailStatusSelect').value = selectedEntryData.status || ''; 
   updateStatusBadge(selectedEntryData.status);
-  updateStatusDropdownPermissions(entry);
+  updateStatusDropdownPermissions(selectedEntryData);
   showingAllActivity = false; 
   document.getElementById('toggleActivityBtn').textContent = 'Show All Activity'; 
   loadRemarksOnly();
