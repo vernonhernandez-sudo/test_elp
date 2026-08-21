@@ -13,7 +13,7 @@ const SHIFT_TIMEZONE = 'Asia/Manila';
 const SHIFT_START_HOUR = 0; // 12:00 AM PHT
 const SHIFT_END_HOUR = 9;   // 9:00 AM PHT
 
-const SESSION_DURATION_MS = 8 * 60 * 60 * 1000 + 10 * 60 * 1000; // 8h 10m
+const SESSION_DURATION_MS = 9 * 60 * 60 * 1000 + 30 * 60 * 1000;
 
 /**
  * Returns the current date/time in Philippine Standard Time.
@@ -147,12 +147,12 @@ function isShiftRestrictedRole(role) {
 /**
  * Login
  */
-function loginUser(username, password) {
+function loginUser(email, password) {
 
-  if (!username || !password) {
+  if (!email || !password) {
     return {
       success: false,
-      message: 'Username and password required.'
+      message: 'Email and password are required.'
     };
   }
 
@@ -162,171 +162,262 @@ function loginUser(username, password) {
       .openById(SHEET_ID)
       .getSheetByName('Agents');
 
+    if (!sheet) {
+      return {
+        success: false,
+        message: 'Agents sheet not found.'
+      };
+    }
+
     var data = sheet.getDataRange().getValues();
+
+    // Remove header row
     data.shift();
+
+    var loginEmail = email
+      .toString()
+      .trim()
+      .toLowerCase();
+
+    /*
+     * =====================================================
+     * SERVER-SIDE EMAIL DOMAIN VALIDATION
+     *
+     * This is important.
+     *
+     * JavaScript validation in Login.html can be bypassed,
+     * so we also validate the domain here.
+     * =====================================================
+     */
+
+    var emailPattern =
+      /^[A-Z0-9._%+-]+@explorabooks\.com$/i;
+
+    if (!emailPattern.test(loginEmail)) {
+
+      return {
+        success: false,
+        message:
+          'Please use your @explorabooks.com email address.'
+      };
+    }
 
     for (var i = 0; i < data.length; i++) {
 
       var row = data[i];
 
-      var storedUsername = row[1]
-        ? row[1].toString().trim().toLowerCase()
+      /*
+       * Column E = Email
+       */
+      var storedEmail = row[4]
+        ? row[4].toString().trim().toLowerCase()
         : '';
 
+      /*
+       * Column C = Password
+       */
       var storedPassword = row[2]
         ? row[2].toString().trim()
         : '';
 
+      /*
+       * Match Email + Password
+       */
       if (
-        storedUsername === username.toLowerCase() &&
+        storedEmail === loginEmail &&
         storedPassword === password
       ) {
 
-        // Column I = Status
+        /*
+         * =================================================
+         * ACCOUNT STATUS
+         * Column I
+         * =================================================
+         */
+
         if (
           row[8] &&
           row[8].toString().trim() !== 'Active'
         ) {
+
           return {
             success: false,
             message: 'Account is not active.'
           };
         }
 
-        // Column H = Role
+        /*
+         * =================================================
+         * ROLE
+         * Column H
+         * =================================================
+         */
+
         var role = row[7]
           ? row[7].toString().trim()
           : '';
 
+        /*
+         * =================================================
+         * USER OBJECT
+         * =================================================
+         */
+
         var user = {
+
           id: row[0],
-          username: row[1],
+
           name: row[3],
+
           email: row[4],
+
           role: role
         };
 
         /*
-         * =====================================================
-         * SHIFT RESTRICTION
-         * Only Sales Partner and Lead Gen Specialist
-         * are restricted to the 12 AM - 9 AM PHT shift.
-         * =====================================================
+         * =================================================
+         * SHIFT LOGIN WINDOW
+         *
+         * Sales Partner and Lead Gen Specialist can only
+         * START a session between 12 AM and 9 AM PHT.
+         *
+         * IMPORTANT:
+         *
+         * There is NO one-login-per-shift restriction.
+         *
+         * They can logout and login again as many times as
+         * they want during the 12 AM - 9 AM window.
+         * =================================================
          */
 
-        if (isShiftRestrictedRole(role)) {
+        var shiftRestricted =
+          isShiftRestrictedRole(role);
 
-          // Cannot login outside the shift.
+        if (shiftRestricted) {
+
           if (!isWithinSalesShift()) {
-            return {
-              success: false,
-              message: 'Your shift is currently closed. Sales Partner and Lead Gen Specialist accounts can only log in from 12:00 AM to 9:00 AM Philippine Standard Time.'
-            };
-          }
-
-          var shiftKey = getCurrentShiftKey();
-
-          /*
-           * Check whether this user already logged in
-           * during this shift.
-           *
-           * This prevents them from logging in again after
-           * their session expires during the same shift.
-           */
-          var loginRecordKey =
-            'SHIFT_LOGIN_' + user.id + '_' + shiftKey;
-
-          var existingLogin =
-            PropertiesService
-              .getScriptProperties()
-              .getProperty(loginRecordKey);
-
-          if (existingLogin) {
 
             return {
               success: false,
-              message: 'You have already used your login session for this shift. You can log in again during the next shift.'
+              message:
+                'Your shift is currently closed. Sales Partner and Lead Gen Specialist accounts can only log in from 12:00 AM to 9:00 AM Philippine Standard Time.'
             };
           }
-
-          /*
-           * Mark this user as having logged in for this shift.
-           */
-          PropertiesService
-            .getScriptProperties()
-            .setProperty(
-              loginRecordKey,
-              new Date().toISOString()
-            );
         }
 
-        var sessionId = Utilities.getUuid();
+        /*
+         * =================================================
+         * CREATE SESSION
+         * =================================================
+         */
 
-        var loginTime = Date.now();
+        var sessionId =
+          Utilities.getUuid();
+
+        var loginTime =
+          Date.now();
 
         /*
-         * Maximum session expiration:
-         * login time + 8 hours 10 minutes.
+         * Default session duration.
+         *
+         * We will still cap restricted users at 9 AM below.
          */
         var sessionExpiry =
           loginTime + SESSION_DURATION_MS;
 
         /*
-         * For restricted roles, the session cannot continue
-         * beyond the 9 AM PHT shift ending.
+         * =================================================
+         * HARD 9:00 AM CUTOFF
+         *
+         * Even if SESSION_DURATION_MS goes beyond 9 AM,
+         * restricted users can NEVER remain logged in
+         * beyond the current shift.
+         * =================================================
          */
-        if (isShiftRestrictedRole(role)) {
 
-          var shiftEnd = getShiftEndTimestamp();
+        if (shiftRestricted) {
+
+          var shiftEnd =
+            getShiftEndTimestamp();
 
           if (shiftEnd < sessionExpiry) {
-            sessionExpiry = shiftEnd;
+
+            sessionExpiry =
+              shiftEnd;
           }
         }
 
+        /*
+         * =================================================
+         * SESSION DATA
+         * =================================================
+         */
+
         var sessionData = {
+
           id: user.id,
-          username: user.username,
+
           name: user.name,
+
           email: user.email,
+
           role: user.role,
 
           loginTime: loginTime,
+
           expiresAt: sessionExpiry,
 
-          shiftKey: isShiftRestrictedRole(role)
-            ? getCurrentShiftKey()
-            : null,
-
-          shiftRestricted:
-            isShiftRestrictedRole(role)
+          shiftRestricted: shiftRestricted
         };
 
-        saveSession(sessionId, sessionData);
+        /*
+         * Save session
+         */
+        saveSession(
+          sessionId,
+          sessionData
+        );
+
+        /*
+         * =================================================
+         * SUCCESS
+         * =================================================
+         */
 
         return {
+
           success: true,
+
           sessionId: sessionId,
+
           user: {
+
             id: user.id,
+
             name: user.name,
+
             email: user.email,
+
             role: user.role
           }
         };
       }
     }
 
+    /*
+     * No matching account
+     */
     return {
       success: false,
-      message: 'Invalid username or password.'
+      message: 'Invalid email or password.'
     };
 
   } catch (error) {
 
     return {
       success: false,
-      message: 'Error: ' + error.toString()
+      message:
+        'Error: ' + error.toString()
     };
   }
 }
@@ -341,41 +432,51 @@ function loginUser(username, password) {
  */
 function getUserFromCache(sessionId) {
 
-  if (!sessionId) return null;
+  if (!sessionId) {
+    return null;
+  }
 
-  var session = getStoredSession(sessionId);
+  var session =
+    getStoredSession(sessionId);
 
-  if (!session) return null;
+  if (!session) {
+    return null;
+  }
 
-  var now = Date.now();
+  var now =
+    Date.now();
 
   /*
-   * Normal 8h10m expiration.
+   * =====================================================
+   * SESSION EXPIRATION
+   * =====================================================
    */
-  if (now >= Number(session.expiresAt)) {
+
+  if (
+    !session.expiresAt ||
+    now >= Number(session.expiresAt)
+  ) {
+
     removeStoredSession(sessionId);
+
     return null;
   }
 
   /*
-   * Sales Partner and Lead Gen Specialist
-   * are tied to their original shift.
+   * =====================================================
+   * ADDITIONAL SHIFT SAFETY CHECK
+   *
+   * If the user is a restricted role and the shift is
+   * already over, immediately invalidate the session.
+   * =====================================================
    */
+
   if (session.shiftRestricted) {
 
-    /*
-     * If the shift has ended, invalidate immediately.
-     */
     if (!isWithinSalesShift()) {
-      removeStoredSession(sessionId);
-      return null;
-    }
 
-    /*
-     * Make sure the session belongs to today's shift.
-     */
-    if (session.shiftKey !== getCurrentShiftKey()) {
       removeStoredSession(sessionId);
+
       return null;
     }
   }

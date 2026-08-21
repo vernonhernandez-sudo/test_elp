@@ -183,39 +183,101 @@ function handleLogin(e) {
 
   e.preventDefault();
 
-  var u = document.getElementById('username').value.trim();
-  var p = document.getElementById('password').value;
+  var email =
+    document.getElementById('email').value.trim();
 
-  var b = document.getElementById('loginButton');
-  var er = document.getElementById('loginError');
+  var password =
+    document.getElementById('password').value;
 
-  er.style.display = 'none';
+  var button =
+    document.getElementById('loginButton');
 
-  if (!u || !p) {
+  var error =
+    document.getElementById('loginError');
 
-    er.textContent =
-      'Please enter username and password.';
+  error.style.display = 'none';
 
-    er.style.display = 'block';
+  /*
+   * =====================================================
+   * EMAIL VALIDATION
+   *
+   * Only @explorabooks.com is allowed.
+   * =====================================================
+   */
+
+  var emailPattern =
+    /^[A-Z0-9._%+-]+@explorabooks\.com$/i;
+
+  if (!email) {
+
+    error.textContent =
+      'Please enter your email address.';
+
+    error.style.display =
+      'block';
 
     return;
   }
 
-  b.disabled = true;
-  b.textContent = 'Signing in...';
+  if (!emailPattern.test(email)) {
+
+    error.textContent =
+      'Please use your @explorabooks.com email address.';
+
+    error.style.display =
+      'block';
+
+    return;
+  }
+
+  /*
+   * =====================================================
+   * PASSWORD VALIDATION
+   * =====================================================
+   */
+
+  if (!password) {
+
+    error.textContent =
+      'Please enter your password.';
+
+    error.style.display =
+      'block';
+
+    return;
+  }
+
+  /*
+   * Disable button while logging in.
+   */
+
+  button.disabled = true;
+
+  button.textContent =
+    'Signing in...';
+
+  /*
+   * =====================================================
+   * SERVER LOGIN
+   * =====================================================
+   */
 
   google.script.run
 
-    .withSuccessHandler(function(r) {
+    .withSuccessHandler(function(result) {
 
-      b.disabled = false;
-      b.textContent = 'Sign In';
+      button.disabled = false;
 
-      if (r.success) {
+      button.textContent =
+        'Sign In';
 
-        SESSION_ID = r.sessionId;
+      if (result.success) {
 
-        currentUser = r.user;
+        SESSION_ID =
+          result.sessionId;
+
+        currentUser =
+          result.user;
 
         sessionStorage.setItem(
           'crm_session',
@@ -224,30 +286,45 @@ function handleLogin(e) {
 
         populateUser();
 
+        /*
+         * For now, show Agent dashboard.
+         *
+         * We will replace this with role-based routing
+         * after the other dashboard files are ready.
+         */
+
         showAgent();
 
       } else {
 
-        er.textContent = r.message;
-        er.style.display = 'block';
+        error.textContent =
+          result.message;
 
+        error.style.display =
+          'block';
       }
 
     })
 
     .withFailureHandler(function(error) {
 
-      b.disabled = false;
-      b.textContent = 'Sign In';
+      button.disabled = false;
 
-      er.textContent =
+      button.textContent =
+        'Sign In';
+
+      error.textContent =
         'Unable to connect to the server. Please try again.';
 
-      er.style.display = 'block';
+      error.style.display =
+        'block';
 
     })
 
-    .loginUser(u, p);
+    .loginUser(
+      email,
+      password
+    );
 }
 
 function handleLogout() {
@@ -266,7 +343,7 @@ function handleLogout() {
   document.getElementById('agentScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
 
-  document.getElementById('username').value = '';
+  document.getElementById('email').value = '';
   document.getElementById('password').value = '';
 
   document.getElementById('loginError').style.display = 'none';
