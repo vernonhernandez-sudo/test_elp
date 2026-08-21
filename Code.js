@@ -150,9 +150,15 @@ function isShiftRestrictedRole(role) {
 function loginUser(username, password) {
 
   if (!username || !password) {
-    return {
-      success: false,
-      message: 'Username and password required.'
+    return { 
+      success: true, 
+      sessionId: sessionId, 
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      } 
     };
   }
 
@@ -198,12 +204,12 @@ function loginUser(username, password) {
           ? row[7].toString().trim()
           : '';
 
-        var user = {
-          id: row[0],
-          username: row[1],
-          name: row[3],
+        var user = { 
+          id: row[0], 
+          username: row[1], 
+          name: row[3], 
           email: row[4],
-          role: role
+          role: row[7] ? row[7].toString().trim() : ''
         };
 
         /*
@@ -782,29 +788,18 @@ function getEntries(sessionId) {
       }
 
       entries.push({
-
         id: ed[i][0],
-
         authorName: ed[i][1] || '',
-
         phones: ed[i][2] || '',
-
         email: ed[i][3] || '',
-
         book: ed[i][4] || '',
-
         isbn: ed[i][5] || '',
-
         address: ed[i][6] || '',
-
-        assignedAgentId: assignedAgentId,
-
-        assignedAgentName: am[assignedAgentId] || 'Unassigned',
-
+        assignedAgentId: ed[i][7],
+        assignedAgentName: am[ed[i][7]] || 'Unassigned',
         status: ed[i][8] || '',
-
-        createdAt: ed[i][9] || ''
-
+        createdAt: ed[i][9] || '',
+        minedById: ed[i][12] || ''
       });
 
     }
@@ -864,8 +859,8 @@ function getEntries(sessionId) {
 
 // ========== STATUS MANAGEMENT ==========
 function updateEntryStatus(sessionId, entryId, newStatus) {
-  try { 
-    var u = getUserFromCache(sessionId); 
+  try {
+    var u = getUserFromCache(sessionId);
 
     if (!u) {
       return {
@@ -884,39 +879,152 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
     }
 
     var ss = SpreadsheetApp.openById(SHEET_ID);
-    var s = ss.getSheetByName('Entries');
-    var d = s.getDataRange().getValues(); 
+    var entrySheet = ss.getSheetByName('Entries');
+    var agentsSheet = ss.getSheetByName('Agents');
 
-    for (var i = 1; i < d.length; i++) {
-      if (d[i][0] == entryId) {
+    if (!entrySheet || !agentsSheet) {
+      return {
+        success: false,
+        message: 'Required sheet not found.'
+      };
+    }
 
-        s.getRange(i + 1, 9).setValue(newStatus);
+    var entryData = entrySheet.getDataRange().getValues();
+    var agentData = agentsSheet.getDataRange().getValues();
 
-        logActivity(
-          u.id,
-          u.name,
-          'Status #' + entryId + ' to ' + (newStatus || 'None')
-        );
+    var entryRow = null;
 
-        addSystemRemark(
-          entryId,
-          u.name,
-          'Status changed to ' + (newStatus || 'None')
-        );
+    // Find the entry
+    for (var i = 1; i < entryData.length; i++) {
+      if (String(entryData[i][0]) === String(entryId)) {
+        entryRow = entryData[i];
+        break;
+      }
+    }
 
+    if (!entryRow) {
+      return {
+        success: false,
+        message: 'Entry not found.'
+      };
+    }
+
+    /*
+     * Entries columns:
+     *
+     * [0] ID
+     * [1] Author
+     * [2] Phones
+     * [3] Email
+     * [4] Book
+     * [5] ISBN
+     * [6] Address
+     * [7] Assigned Agent ID
+     * [8] Status
+     * [9] Created/Assigned At
+     * [10] ...
+     * [11] ...
+     * [12] Mined By
+     */
+
+    var currentStatus = entryRow[8]
+      ? entryRow[8].toString().trim()
+      : '';
+
+    var minedById = entryRow[12]
+      ? entryRow[12].toString().trim()
+      : '';
+
+    /*
+     * Find the role of the logged-in user.
+     */
+    var userRole = '';
+
+    for (var j = 1; j < agentData.length; j++) {
+      if (String(agentData[j][0]) === String(u.id)) {
+        userRole = agentData[j][7]
+          ? agentData[j][7].toString().trim()
+          : '';
+        break;
+      }
+    }
+
+    /*
+     * SALES PARTNER RULE
+     *
+     * A Sales Partner cannot manually return a
+     * Lead Gen Specialist lead to "- No Status -".
+     *
+     * A Sales Partner also cannot change a Lead Gen
+     * Specialist lead to "Exclusive".
+     *
+     * Exclusive is only for leads mined by the
+     * Sales Partner or Admin themselves.
+     */
+    if (userRole === 'Sales Partner') {
+
+      var isOwnLead =
+        String(minedById) === String(u.id);
+
+      // Sales Partners cannot use "No Status"
+      // on a lead that they did not mine.
+      if (newStatus === '' && !isOwnLead) {
         return {
-          success: true,
-          message: 'Updated!'
+          success: false,
+          message: 'Sales Partners cannot return a Lead Gen Specialist lead to No Status.'
+        };
+      }
+
+      // Sales Partners cannot mark another person's
+      // lead as Exclusive.
+      if (newStatus === 'Exclusive' && !isOwnLead) {
+        return {
+          success: false,
+          message: 'Only the person who mined the lead can mark it as Exclusive.'
         };
       }
     }
 
+    /*
+     * ADMIN RULE
+     *
+     * Admins are allowed to manually use:
+     * - No Status
+     * - Pipe
+     * - Exclusive
+     * - VM
+     * - DNC
+     * - Sold
+     *
+     * Therefore no restriction is applied here.
+     */
+
+    entrySheet.getRange(
+      entryData.findIndex(function(row) {
+        return String(row[0]) === String(entryId);
+      }) + 1,
+      9
+    ).setValue(newStatus);
+
+    logActivity(
+      u.id,
+      u.name,
+      'Status #' + entryId + ' to ' + (newStatus || 'None')
+    );
+
+    addSystemRemark(
+      entryId,
+      u.name,
+      'Status changed to ' + (newStatus || 'None')
+    );
+
     return {
-      success: false,
-      message: 'Not found.'
+      success: true,
+      message: 'Updated!'
     };
 
   } catch (e) {
+
     console.error('updateEntryStatus error:', e);
 
     return {

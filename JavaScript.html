@@ -574,6 +574,7 @@ function selectEntry(entryId) {
   document.getElementById('detailAddressEdit').value = selectedEntryData.address || '';
   document.getElementById('detailStatusSelect').value = selectedEntryData.status || ''; 
   updateStatusBadge(selectedEntryData.status);
+  updateStatusOptions();
   showingAllActivity = false; 
   document.getElementById('toggleActivityBtn').textContent = 'Show All Activity'; 
   loadRemarksOnly();
@@ -777,6 +778,54 @@ function updateStatusBadge(status) {
   }
 
   b.textContent = getStatusLabel(status);
+}
+
+function updateStatusOptions() {
+  var select = document.getElementById('detailStatusSelect');
+
+  if (!select || !currentUser || !selectedEntryData) return;
+
+  var isSalesPartner = currentUser.role === 'Sales Partner';
+
+  var minedById = selectedEntryData.minedById
+    ? String(selectedEntryData.minedById)
+    : '';
+
+  var currentUserId = currentUser.id
+    ? String(currentUser.id)
+    : '';
+
+  var isOwnLead = minedById !== '' && minedById === currentUserId;
+
+  /*
+   * Reset all options first.
+   */
+  for (var i = 0; i < select.options.length; i++) {
+    select.options[i].disabled = false;
+  }
+
+  /*
+   * Only Sales Partners have this restriction.
+   *
+   * If this is NOT their own lead:
+   * - No Status is disabled
+   * - Exclusive is disabled
+   *
+   * Admins keep both options available.
+   */
+  if (isSalesPartner && !isOwnLead) {
+
+    for (var j = 0; j < select.options.length; j++) {
+
+      if (select.options[j].value === '') {
+        select.options[j].disabled = true;
+      }
+
+      if (select.options[j].value === 'Exclusive') {
+        select.options[j].disabled = true;
+      }
+    }
+  }
 }
 
 // ========== REMARKS & ACTIVITY ==========
