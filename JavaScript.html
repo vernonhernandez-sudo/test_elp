@@ -183,514 +183,93 @@ function handleLogin(e) {
 
   e.preventDefault();
 
-  var email =
-    document.getElementById('email').value
-      .trim()
-      .toLowerCase();
+  var u = document.getElementById('username').value.trim();
+  var p = document.getElementById('password').value;
 
-  var password =
-    document.getElementById('password').value;
+  var b = document.getElementById('loginButton');
+  var er = document.getElementById('loginError');
 
-  var button =
-    document.getElementById('loginButton');
+  er.style.display = 'none';
 
-  var error =
-    document.getElementById('loginError');
+  if (!u || !p) {
 
-  /*
-   * Hide previous error.
-   */
+    er.textContent =
+      'Please enter username and password.';
 
-  error.style.display = 'none';
-  error.textContent = '';
-
-  /*
-   * =====================================================
-   * BASIC VALIDATION
-   * =====================================================
-   */
-
-  if (!email || !password) {
-
-    error.textContent =
-      'Please enter your email and password.';
-
-    error.style.display = 'block';
+    er.style.display = 'block';
 
     return;
   }
 
-  /*
-   * =====================================================
-   * EMAIL DOMAIN VALIDATION
-   * =====================================================
-   */
-
-  var emailPattern =
-    /^[a-zA-Z0-9._%+-]+@explorabooks\.com$/i;
-
-  if (!emailPattern.test(email)) {
-
-    error.textContent =
-      'Please use your @explorabooks.com email address.';
-
-    error.style.display = 'block';
-
-    document.getElementById('email').focus();
-
-    return;
-  }
-
-  /*
-   * =====================================================
-   * DISABLE LOGIN BUTTON
-   * =====================================================
-   */
-
-  button.disabled = true;
-
-  button.textContent =
-    'Signing in...';
-
-  button.style.opacity = '0.7';
-
-  /*
-   * =====================================================
-   * CALL APPS SCRIPT
-   * =====================================================
-   */
+  b.disabled = true;
+  b.textContent = 'Signing in...';
 
   google.script.run
 
-    .withSuccessHandler(function(response) {
+    .withSuccessHandler(function(r) {
 
-      button.disabled = false;
+      b.disabled = false;
+      b.textContent = 'Sign In';
 
-      button.textContent =
-        'Sign In';
+      if (r.success) {
 
-      button.style.opacity = '1';
+        SESSION_ID = r.sessionId;
 
-      /*
-       * =================================================
-       * LOGIN SUCCESS
-       * =================================================
-       */
-
-      if (response && response.success) {
-
-        /*
-         * Store session.
-         */
-
-        SESSION_ID =
-          response.sessionId;
-
-        /*
-         * Store authenticated user.
-         */
-
-        currentUser =
-          response.user;
-
-        /*
-         * Save session in browser.
-         */
+        currentUser = r.user;
 
         sessionStorage.setItem(
           'crm_session',
           SESSION_ID
         );
 
-        /*
-         * Update user information.
-         */
+        populateUser();
 
-        if (typeof populateUser === 'function') {
-          populateUser();
-        }
+        showAgent();
 
-        /*
-         * Route user based on ROLE.
-         */
+      } else {
 
-        routeUserByRole();
-
-      }
-
-      /*
-       * =================================================
-       * LOGIN FAILED
-       * =================================================
-       */
-
-      else {
-
-        error.textContent =
-          response && response.message
-            ? response.message
-            : 'Invalid email or password.';
-
-        error.style.display =
-          'block';
+        er.textContent = r.message;
+        er.style.display = 'block';
 
       }
 
     })
 
-    .withFailureHandler(function(errorResponse) {
+    .withFailureHandler(function(error) {
 
-      button.disabled = false;
+      b.disabled = false;
+      b.textContent = 'Sign In';
 
-      button.textContent =
-        'Sign In';
-
-      button.style.opacity =
-        '1';
-
-      error.textContent =
+      er.textContent =
         'Unable to connect to the server. Please try again.';
 
-      error.style.display =
-        'block';
-
-      console.error(
-        'Login error:',
-        errorResponse
-      );
+      er.style.display = 'block';
 
     })
 
-    .loginUser(
-      email,
-      password
-    );
-}
-
-/**
- * Routes the authenticated user to the
- * appropriate dashboard based on their role.
- */
-function routeUserByRole() {
-
-  /*
-   * Make sure we have an authenticated user.
-   */
-
-  if (!currentUser) {
-
-    console.error(
-      'No authenticated user found.'
-    );
-
-    return;
-  }
-
-  /*
-   * Get role.
-   */
-
-  var role =
-    currentUser.role
-      ? currentUser.role.toString().trim()
-      : '';
-
-  /*
-   * Hide every dashboard first.
-   */
-
-  hideAllScreens();
-
-  /*
-   * =====================================================
-   * SUPER ADMIN
-   * =====================================================
-   */
-
-  if (role === 'Super Admin') {
-
-    showSuperAdmin();
-
-    return;
-  }
-
-  /*
-   * =====================================================
-   * ADMIN
-   * =====================================================
-   */
-
-  if (role === 'Admin') {
-
-    showAdmin();
-
-    return;
-  }
-
-  /*
-   * =====================================================
-   * LEAD GEN SPECIALIST
-   * =====================================================
-   */
-
-  if (role === 'Lead Gen Specialist') {
-
-    showLeadgen();
-
-    return;
-  }
-
-  /*
-   * =====================================================
-   * SALES PARTNER
-   * =====================================================
-   */
-
-  if (role === 'Sales Partner') {
-
-    showAgent();
-
-    return;
-  }
-
-  /*
-   * =====================================================
-   * UNKNOWN ROLE
-   * =====================================================
-   */
-
-  showLoginError(
-    'Your account does not have a valid role. Please contact an administrator.'
-  );
-}
-
-/**
- * Hide all application screens.
- */
-function hideAllScreens() {
-
-  var screens = [
-    'loginScreen',
-    'agentScreen',
-    'leadgenScreen',
-    'adminScreen',
-    'superAdminScreen'
-  ];
-
-  screens.forEach(function(id) {
-
-    var element =
-      document.getElementById(id);
-
-    if (element) {
-      element.style.display = 'none';
-    }
-
-  });
-}
-
-
-/**
- * Show Sales Partner dashboard.
- */
-function showAgent() {
-
-  hideAllScreens();
-
-  var screen =
-    document.getElementById('agentScreen');
-
-  if (screen) {
-
-    screen.style.display =
-      'flex';
-
-  }
-
-}
-
-
-/**
- * Show Lead Gen dashboard.
- *
- * Currently under development.
- */
-function showLeadgen() {
-
-  hideAllScreens();
-
-  var screen =
-    document.getElementById('leadgenScreen');
-
-  if (screen) {
-
-    screen.style.display =
-      'flex';
-
-  }
-
-}
-
-
-/**
- * Show Admin dashboard.
- *
- * Currently under development.
- */
-function showAdmin() {
-
-  hideAllScreens();
-
-  var screen =
-    document.getElementById('adminScreen');
-
-  if (screen) {
-
-    screen.style.display =
-      'flex';
-
-  }
-
-}
-
-
-/**
- * Show Super Admin dashboard.
- *
- * Currently under development.
- */
-function showSuperAdmin() {
-
-  hideAllScreens();
-
-  var screen =
-    document.getElementById('superAdminScreen');
-
-  if (screen) {
-
-    screen.style.display =
-      'flex';
-
-  }
-
-}
-
-
-/**
- * Display login error.
- */
-function showLoginError(message) {
-
-  hideAllScreens();
-
-  var loginScreen =
-    document.getElementById('loginScreen');
-
-  if (loginScreen) {
-    loginScreen.style.display = 'flex';
-  }
-
-  var error =
-    document.getElementById('loginError');
-
-  if (error) {
-
-    error.textContent =
-      message;
-
-    error.style.display =
-      'block';
-
-  }
-
+    .loginUser(u, p);
 }
 
 function handleLogout() {
 
-  /*
-   * Tell the server to invalidate the session.
-   */
-
   if (SESSION_ID) {
-
-    google.script.run
-      .logoutUser(SESSION_ID);
-
+    google.script.run.logoutUser(SESSION_ID);
   }
-
-  /*
-   * Stop session monitoring.
-   */
 
   stopSessionMonitoring();
 
-  /*
-   * Remove browser session.
-   */
-
-  sessionStorage.removeItem(
-    'crm_session'
-  );
-
-  /*
-   * Clear global variables.
-   */
+  sessionStorage.removeItem('crm_session');
 
   SESSION_ID = null;
-
   currentUser = null;
 
-  /*
-   * Hide all dashboards.
-   */
+  document.getElementById('agentScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
 
-  hideAllScreens();
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
 
-  /*
-   * Show login.
-   */
-
-  var loginScreen =
-    document.getElementById('loginScreen');
-
-  if (loginScreen) {
-    loginScreen.style.display = 'flex';
-  }
-
-  /*
-   * Clear login fields.
-   */
-
-  var email =
-    document.getElementById('email');
-
-  var password =
-    document.getElementById('password');
-
-  if (email) {
-    email.value = '';
-  }
-
-  if (password) {
-    password.value = '';
-  }
-
-  /*
-   * Clear login error.
-   */
-
-  var error =
-    document.getElementById('loginError');
-
-  if (error) {
-
-    error.textContent = '';
-
-    error.style.display =
-      'none';
-
-  }
-
+  document.getElementById('loginError').style.display = 'none';
 }
 
 function showToast(message, type) { 
