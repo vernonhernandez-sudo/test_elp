@@ -1,13 +1,233 @@
 <!DOCTYPE html>
+
 <html>
+
 <head>
+
   <base target="_top">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>body{margin:0;padding:0;overflow:hidden;}</style>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
+
 </head>
+
 <body>
-  <div id="loginScreen"><?!= include('Login'); ?></div>
-  <div id="agentScreen" style="display:none;"><?!= include('Agent'); ?></div>
+
+  <!-- =====================================================
+       LOGIN
+       ===================================================== -->
+
+  <div id="loginScreen">
+
+    <?!= include('Login'); ?>
+
+  </div>
+
+
+  <!-- =====================================================
+       SALES PARTNER
+       ===================================================== -->
+
+  <div
+    id="agentScreen"
+    style="display:none;"
+  >
+
+    <?!= include('Agent'); ?>
+
+  </div>
+
+
+  <!-- =====================================================
+       LEAD GEN SPECIALIST
+       ===================================================== -->
+
+  <div
+    id="leadgenScreen"
+    style="display:none;"
+  >
+
+    <div
+      style="
+        height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#f5f5f5;
+        font-family:Segoe UI,Arial,sans-serif;
+      "
+    >
+
+      <div
+        style="
+          background:white;
+          padding:40px;
+          border-radius:16px;
+          box-shadow:0 10px 40px rgba(0,0,0,0.1);
+          text-align:center;
+        "
+      >
+
+        <h2 style="color:#800000;margin-top:0;">
+          Lead Gen Dashboard
+        </h2>
+
+        <p style="color:#777;">
+          This dashboard is currently under development.
+        </p>
+
+        <button
+          onclick="handleLogout()"
+          style="
+            padding:10px 20px;
+            background:#800000;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+          "
+        >
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       ADMIN
+       ===================================================== -->
+
+  <div
+    id="adminScreen"
+    style="display:none;"
+  >
+
+    <div
+      style="
+        height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#f5f5f5;
+        font-family:Segoe UI,Arial,sans-serif;
+      "
+    >
+
+      <div
+        style="
+          background:white;
+          padding:40px;
+          border-radius:16px;
+          box-shadow:0 10px 40px rgba(0,0,0,0.1);
+          text-align:center;
+        "
+      >
+
+        <h2 style="color:#800000;margin-top:0;">
+          Admin Dashboard
+        </h2>
+
+        <p style="color:#777;">
+          This dashboard is currently under development.
+        </p>
+
+        <button
+          onclick="handleLogout()"
+          style="
+            padding:10px 20px;
+            background:#800000;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+          "
+        >
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       SUPER ADMIN
+       ===================================================== -->
+
+  <div
+    id="superAdminScreen"
+    style="display:none;"
+  >
+
+    <div
+      style="
+        height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#f5f5f5;
+        font-family:Segoe UI,Arial,sans-serif;
+      "
+    >
+
+      <div
+        style="
+          background:white;
+          padding:40px;
+          border-radius:16px;
+          box-shadow:0 10px 40px rgba(0,0,0,0.1);
+          text-align:center;
+        "
+      >
+
+        <h2 style="color:#800000;margin-top:0;">
+          Super Admin Dashboard
+        </h2>
+
+        <p style="color:#777;">
+          This dashboard is currently under development.
+        </p>
+
+        <button
+          onclick="handleLogout()"
+          style="
+            padding:10px 20px;
+            background:#800000;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+          "
+        >
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       SHARED JAVASCRIPT
+       ===================================================== -->
+
   <?!= include('JavaScript'); ?>
+
 </body>
+
 </html>

@@ -146,101 +146,216 @@ function isShiftRestrictedRole(role) {
 
 /**
  * Login
+ *
+ * Authentication:
+ * - Email is taken from Agents column E
+ * - Password is taken from Agents column C
+ * - Role is taken from Agents column H
+ * - Status is taken from Agents column I
+ *
+ * Only @explorabooks.com email addresses are allowed.
  */
-function loginUser(username, password) {
+function loginUser(email, password) {
 
-  if (!username || !password) {
-    return { 
-      success: true, 
-      sessionId: sessionId, 
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      } 
+  /*
+   * =====================================================
+   * BASIC VALIDATION
+   * =====================================================
+   */
+
+  if (!email || !password) {
+    return {
+      success: false,
+      message: 'Please enter your email and password.'
+    };
+  }
+
+  /*
+   * =====================================================
+   * EMAIL VALIDATION
+   * =====================================================
+   *
+   * Only @explorabooks.com accounts are allowed.
+   */
+
+  email = email.toString().trim().toLowerCase();
+
+  var emailPattern =
+    /^[a-zA-Z0-9._%+-]+@explorabooks\.com$/i;
+
+  if (!emailPattern.test(email)) {
+    return {
+      success: false,
+      message: 'Please use your @explorabooks.com email address.'
     };
   }
 
   try {
 
+    /*
+     * =====================================================
+     * GET AGENTS SHEET
+     * =====================================================
+     */
+
     var sheet = SpreadsheetApp
       .openById(SHEET_ID)
       .getSheetByName('Agents');
 
+    if (!sheet) {
+      return {
+        success: false,
+        message: 'Agents sheet was not found.'
+      };
+    }
+
     var data = sheet.getDataRange().getValues();
+
+    /*
+     * Remove header row.
+     */
     data.shift();
+
+    /*
+     * =====================================================
+     * FIND USER
+     * =====================================================
+     */
 
     for (var i = 0; i < data.length; i++) {
 
       var row = data[i];
 
-      var storedUsername = row[1]
-        ? row[1].toString().trim().toLowerCase()
+      /*
+       * Spreadsheet columns:
+       *
+       * A = AgentID
+       * B = Username
+       * C = Password
+       * D = Name
+       * E = Email
+       * F = Team
+       * G = Phone
+       * H = Role
+       * I = Status
+       * J = VerificationToken
+       */
+
+      var storedEmail = row[4]
+        ? row[4].toString().trim().toLowerCase()
         : '';
 
       var storedPassword = row[2]
         ? row[2].toString().trim()
         : '';
 
+      /*
+       * Compare EMAIL + PASSWORD.
+       */
+
       if (
-        storedUsername === username.toLowerCase() &&
+        storedEmail === email &&
         storedPassword === password
       ) {
 
-        // Column I = Status
-        if (
-          row[8] &&
-          row[8].toString().trim() !== 'Active'
-        ) {
+        /*
+         * =================================================
+         * CHECK ACCOUNT STATUS
+         * =================================================
+         */
+
+        var status = row[8]
+          ? row[8].toString().trim()
+          : '';
+
+        if (status !== 'Active') {
+
           return {
             success: false,
             message: 'Account is not active.'
           };
+
         }
 
-        // Column H = Role
+        /*
+         * =================================================
+         * GET ROLE
+         * =================================================
+         */
+
         var role = row[7]
           ? row[7].toString().trim()
           : '';
 
-        var user = { 
-          id: row[0], 
-          username: row[1], 
-          name: row[3], 
+        /*
+         * =================================================
+         * BUILD USER OBJECT
+         * =================================================
+         */
+
+        var user = {
+
+          id: row[0],
+
+          /*
+           * Keep username in the session.
+           * Other parts of your system may still use it.
+           */
+          username: row[1],
+
+          name: row[3],
+
           email: row[4],
-          role: row[7] ? row[7].toString().trim() : ''
+
+          role: role
+
         };
 
         /*
-         * =====================================================
+         * =================================================
          * SHIFT RESTRICTION
-         * Only Sales Partner and Lead Gen Specialist
-         * are restricted to the 12 AM - 9 AM PHT shift.
-         * =====================================================
+         * =================================================
+         *
+         * Sales Partner and Lead Gen Specialist:
+         * 12:00 AM - 9:00 AM PHT
+         *
+         * Super Admin and Admin:
+         * No shift restriction.
+         * =================================================
          */
 
         if (isShiftRestrictedRole(role)) {
 
-          // Cannot login outside the shift.
+          /*
+           * Cannot login outside the shift.
+           */
+
           if (!isWithinSalesShift()) {
+
             return {
               success: false,
-              message: 'Your shift is currently closed. Sales Partner and Lead Gen Specialist accounts can only log in from 12:00 AM to 9:00 AM Philippine Standard Time.'
+              message:
+                'Your shift is currently closed. Sales Partner and Lead Gen Specialist accounts can only log in from 12:00 AM to 9:00 AM Philippine Standard Time.'
             };
+
           }
+
+          /*
+           * Get current shift.
+           */
 
           var shiftKey = getCurrentShiftKey();
 
           /*
-           * Check whether this user already logged in
-           * during this shift.
-           *
-           * This prevents them from logging in again after
-           * their session expires during the same shift.
+           * Prevent the same user from logging in
+           * more than once during the same shift.
            */
+
           var loginRecordKey =
-            'SHIFT_LOGIN_' + user.id + '_' + shiftKey;
+            'SHIFT_LOGIN_' +
+            user.id +
+            '_' +
+            shiftKey;
 
           var existingLogin =
             PropertiesService
@@ -251,13 +366,17 @@ function loginUser(username, password) {
 
             return {
               success: false,
-              message: 'You have already used your login session for this shift. You can log in again during the next shift.'
+              message:
+                'You have already used your login session for this shift. You can log in again during the next shift.'
             };
+
           }
 
           /*
-           * Mark this user as having logged in for this shift.
+           * Mark this user as having logged in
+           * during this shift.
            */
+
           PropertiesService
             .getScriptProperties()
             .setProperty(
@@ -266,66 +385,122 @@ function loginUser(username, password) {
             );
         }
 
-        var sessionId = Utilities.getUuid();
+        /*
+         * =================================================
+         * CREATE SESSION
+         * =================================================
+         */
 
-        var loginTime = Date.now();
+        var sessionId =
+          Utilities.getUuid();
+
+        var loginTime =
+          Date.now();
 
         /*
-         * Maximum session expiration:
+         * Normal session expiration:
          * login time + 8 hours 10 minutes.
          */
+
         var sessionExpiry =
           loginTime + SESSION_DURATION_MS;
 
         /*
-         * For restricted roles, the session cannot continue
-         * beyond the 9 AM PHT shift ending.
+         * Restricted roles cannot remain logged in
+         * after the shift ends.
          */
+
         if (isShiftRestrictedRole(role)) {
 
-          var shiftEnd = getShiftEndTimestamp();
+          var shiftEnd =
+            getShiftEndTimestamp();
 
           if (shiftEnd < sessionExpiry) {
             sessionExpiry = shiftEnd;
           }
+
         }
 
+        /*
+         * =================================================
+         * SESSION DATA
+         * =================================================
+         */
+
         var sessionData = {
+
           id: user.id,
+
           username: user.username,
+
           name: user.name,
+
           email: user.email,
+
           role: user.role,
 
           loginTime: loginTime,
+
           expiresAt: sessionExpiry,
 
-          shiftKey: isShiftRestrictedRole(role)
-            ? getCurrentShiftKey()
-            : null,
+          shiftKey:
+            isShiftRestrictedRole(role)
+              ? getCurrentShiftKey()
+              : null,
 
           shiftRestricted:
             isShiftRestrictedRole(role)
+
         };
 
-        saveSession(sessionId, sessionData);
+        /*
+         * Save session.
+         */
+
+        saveSession(
+          sessionId,
+          sessionData
+        );
+
+        /*
+         * =================================================
+         * SUCCESS
+         * =================================================
+         */
 
         return {
+
           success: true,
+
           sessionId: sessionId,
+
           user: {
+
             id: user.id,
+
             name: user.name,
+
             email: user.email,
+
             role: user.role
+
           }
+
         };
+
       }
+
     }
+
+    /*
+     * =====================================================
+     * USER NOT FOUND / WRONG PASSWORD
+     * =====================================================
+     */
 
     return {
       success: false,
-      message: 'Invalid username or password.'
+      message: 'Invalid email or password.'
     };
 
   } catch (error) {
@@ -334,6 +509,7 @@ function loginUser(username, password) {
       success: false,
       message: 'Error: ' + error.toString()
     };
+
   }
 }
 
