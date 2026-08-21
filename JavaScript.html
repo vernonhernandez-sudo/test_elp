@@ -651,6 +651,7 @@ function selectEntry(entryId) {
   document.getElementById('detailAddressEdit').value = selectedEntryData.address || '';
   document.getElementById('detailStatusSelect').value = selectedEntryData.status || ''; 
   updateStatusBadge(selectedEntryData.status);
+  updateStatusDropdownPermissions(entry);
   showingAllActivity = false; 
   document.getElementById('toggleActivityBtn').textContent = 'Show All Activity'; 
   loadRemarksOnly();
@@ -854,6 +855,96 @@ function updateStatusBadge(status) {
   }
 
   b.textContent = getStatusLabel(status);
+}
+
+function updateStatusDropdownPermissions(entry) {
+
+  var select =
+    document.getElementById('detailStatusSelect');
+
+  if (!select) return;
+
+  /*
+   * First enable everything.
+   */
+  for (var i = 0; i < select.options.length; i++) {
+    select.options[i].disabled = false;
+  }
+
+  /*
+   * Get the current logged-in user.
+   */
+  var user = currentUser;
+
+  if (!user) return;
+
+  /*
+   * Admins and Super Admins have full access.
+   */
+  if (
+    user.role === 'Admin' ||
+    user.role === 'Super Admin'
+  ) {
+    return;
+  }
+
+  /*
+   * Only Sales Partner has the ownership restriction.
+   */
+  if (user.role !== 'Sales Partner') {
+    return;
+  }
+
+  /*
+   * Determine who mined this lead.
+   *
+   * Adjust this property name if your entry object
+   * uses a different name.
+   */
+  var minedById =
+    entry.minedById ||
+    entry.minedBy ||
+    '';
+
+  var isOwnLead =
+    String(minedById) === String(user.id);
+
+  /*
+   * Find options.
+   */
+  var noStatusOption =
+    select.querySelector('option[value=""]');
+
+  var exclusiveOption =
+    select.querySelector('option[value="Exclusive"]');
+
+  /*
+   * =====================================================
+   * SALES PARTNER + LEAD NOT MINED BY THEM
+   * =====================================================
+   */
+
+  if (!isOwnLead) {
+
+    /*
+     * Cannot return another person's lead
+     * to No Status.
+     */
+    if (noStatusOption) {
+      noStatusOption.disabled = true;
+    }
+
+    /*
+     * Cannot mark another person's lead Exclusive.
+     */
+    if (exclusiveOption) {
+      exclusiveOption.disabled = true;
+    }
+  }
+
+  /*
+   * If this is their own lead, everything stays enabled.
+   */
 }
 
 // ========== REMARKS & ACTIVITY ==========
