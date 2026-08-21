@@ -1041,6 +1041,22 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
       ? entryRow[8].toString().trim()
       : '';
 
+          /*
+      * =====================================================
+      * SOLD IS FINAL
+      *
+      * Once an entry is Sold, its status cannot be changed.
+      * =====================================================
+      */
+
+      if (currentStatus === 'Sold') {
+
+        return {
+          success: false,
+          message: 'This entry is already marked as Sold and its status cannot be changed.'
+        };
+      }
+
     var minedById = entryRow[12]
       ? entryRow[12].toString().trim()
       : '';

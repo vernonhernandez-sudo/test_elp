@@ -857,6 +857,8 @@ function updateStatusBadge(status) {
   b.textContent = getStatusLabel(status);
 }
 
+// ========== STATUS DROPDOWN PERMISSIONS ==========
+
 function updateStatusDropdownPermissions(entry) {
 
   var select =
@@ -865,86 +867,122 @@ function updateStatusDropdownPermissions(entry) {
   if (!select) return;
 
   /*
-   * First enable everything.
+   * ==========================================
+   * RESET DROPDOWN
+   * ==========================================
    */
+
+  select.disabled = false;
+
   for (var i = 0; i < select.options.length; i++) {
     select.options[i].disabled = false;
   }
 
   /*
-   * Get the current logged-in user.
+   * ==========================================
+   * NO LOGGED-IN USER
+   * ==========================================
    */
-  var user = currentUser;
 
-  if (!user) return;
+  if (!currentUser) return;
 
   /*
-   * Admins and Super Admins have full access.
-   */
-  if (
-    user.role === 'Admin' ||
-    user.role === 'Super Admin'
-  ) {
-    return;
-  }
-
-  /*
-   * Only Sales Partner has the ownership restriction.
-   */
-  if (user.role !== 'Sales Partner') {
-    return;
-  }
-
-  /*
-   * Determine who mined this lead.
+   * ==========================================
+   * SOLD = FINAL STATUS
    *
-   * Adjust this property name if your entry object
-   * uses a different name.
+   * Once an entry is Sold, the entire status
+   * dropdown is permanently disabled.
+   * ==========================================
    */
+
+  if (entry.status === 'Sold') {
+
+    select.disabled = true;
+
+    return;
+  }
+
+  /*
+   * ==========================================
+   * ADMIN / SUPER ADMIN
+   *
+   * Full status access unless Sold.
+   * ==========================================
+   */
+
+  if (
+    currentUser.role === 'Admin' ||
+    currentUser.role === 'Super Admin'
+  ) {
+
+    return;
+  }
+
+  /*
+   * ==========================================
+   * ONLY SALES PARTNER HAS OWNERSHIP
+   * RESTRICTIONS
+   * ==========================================
+   */
+
+  if (currentUser.role !== 'Sales Partner') {
+
+    return;
+  }
+
+  /*
+   * ==========================================
+   * CHECK LEAD OWNER
+   * ==========================================
+   */
+
   var minedById =
-    entry.minedById ||
-    entry.minedBy ||
-    '';
+    entry.minedById || '';
 
   var isOwnLead =
-    String(minedById) === String(user.id);
+    String(minedById) ===
+    String(currentUser.id);
 
   /*
-   * Find options.
-   */
-  var noStatusOption =
-    select.querySelector('option[value=""]');
-
-  var exclusiveOption =
-    select.querySelector('option[value="Exclusive"]');
-
-  /*
-   * =====================================================
-   * SALES PARTNER + LEAD NOT MINED BY THEM
-   * =====================================================
+   * Their own lead:
+   *
+   * Everything is allowed.
    */
 
-  if (!isOwnLead) {
+  if (isOwnLead) {
 
-    /*
-     * Cannot return another person's lead
-     * to No Status.
-     */
-    if (noStatusOption) {
-      noStatusOption.disabled = true;
-    }
-
-    /*
-     * Cannot mark another person's lead Exclusive.
-     */
-    if (exclusiveOption) {
-      exclusiveOption.disabled = true;
-    }
+    return;
   }
 
   /*
-   * If this is their own lead, everything stays enabled.
+   * ==========================================
+   * ANOTHER PERSON'S LEAD
+   *
+   * Disable:
+   * - No Status
+   * - Exclusive
+   * ==========================================
    */
+
+  var noStatusOption =
+    select.querySelector(
+      'option[value=""]'
+    );
+
+  var exclusiveOption =
+    select.querySelector(
+      'option[value="Exclusive"]'
+    );
+
+  if (noStatusOption) {
+
+    noStatusOption.disabled = true;
+  }
+
+  if (exclusiveOption) {
+
+    exclusiveOption.disabled = true;
+  }
 }
 
 // ========== REMARKS & ACTIVITY ==========
