@@ -482,6 +482,21 @@ function getEntryById(entryId) {
   }
 
   return null;
+} 
+
+// ========== UNIQUE ENTRY ID ==========
+function generateEntryId(data) {
+  var maxId = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var id = Number(data[i][0]);
+
+    if (!isNaN(id) && id > maxId) {
+      maxId = id;
+    }
+  }
+
+  return maxId + 1;
 }
 
 // ========== ENTRY MANAGEMENT (Preventing duplicate Entry IDs) ==========
