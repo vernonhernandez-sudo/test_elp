@@ -1015,6 +1015,7 @@ function selectEntry(entryId) {
   document.getElementById('detailStatusSelect').value = selectedEntryData.status || ''; 
   updateStatusBadge(selectedEntryData.status);
   updateStatusDropdownPermissions(selectedEntryData);
+  updateTransferPendingPermissions(selectedEntryData);
   showingAllActivity = false; 
   document.getElementById('toggleActivityBtn').textContent = 'Show All Activity'; 
   loadRemarksOnly();
@@ -1167,7 +1168,9 @@ function changeEntryStatus() {
 }
 
 function getStatusLabel(status) {
+
   switch (status) {
+
     case 'Pipe':
       return 'Pipe';
 
@@ -1183,6 +1186,9 @@ function getStatusLabel(status) {
     case 'Sold':
       return 'Sold';
 
+    case 'Pending':
+      return 'Pending';
+
     case '':
     case null:
     case undefined:
@@ -1194,27 +1200,44 @@ function getStatusLabel(status) {
 }
 
 function updateStatusBadge(status) {
+
   var b = document.getElementById('detailStatus');
 
   if (!status || status === '') {
+
     b.style.background = '#f5f5f5';
     b.style.color = '#999';
+
+  }
+  else if (status === 'Pending') {
+
+    b.style.background = '#fff8e1';
+    b.style.color = '#f57c00';
+
   }
   else if (status === 'Sold') {
+
     b.style.background = '#e8f5e9';
     b.style.color = '#2e7d32';
+
   }
   else if (status === 'DNC') {
+
     b.style.background = '#ffebee';
     b.style.color = '#c62828';
+
   }
   else if (status === 'VM') {
+
     b.style.background = '#fce4ec';
     b.style.color = '#c2185b';
+
   }
   else {
+
     b.style.background = '#fff3e0';
     b.style.color = '#e67e22';
+
   }
 
   b.textContent = getStatusLabel(status);
@@ -1239,6 +1262,19 @@ function updateStatusDropdownPermissions(entry) {
 
   for (var i = 0; i < select.options.length; i++) {
     select.options[i].disabled = false;
+  }
+
+  /*
+   * ==========================================
+   * TRANSFER PENDING = LOCKED
+   * ==========================================
+   */
+
+  if (entry.transferPending === true) {
+
+    select.disabled = true;
+
+    return;
   }
 
   /*
@@ -1443,6 +1479,101 @@ function updateStatusDropdownPermissions(entry) {
    */
 
   return;
+}
+
+// ========== TRANSFER PENDING PERMISSIONS ==========
+
+function updateTransferPendingPermissions(entry) {
+
+  if (!entry) return;
+
+  var transferBtn =
+    document.getElementById('transferBtn');
+
+  var editBtn =
+    document.getElementById('editBtn');
+
+  var saveEditBtn =
+    document.getElementById('saveEditBtn');
+
+  var cancelEditBtn =
+    document.getElementById('cancelEditBtn');
+
+  /*
+   * ==========================================
+   * CHECK PENDING TRANSFER
+   * ==========================================
+   */
+
+  var isPending =
+    entry.transferPending === true;
+
+  /*
+   * ==========================================
+   * PENDING = LOCK ENTRY
+   * ==========================================
+   */
+
+  if (isPending) {
+
+    // Transfer
+    if (transferBtn) {
+      transferBtn.disabled = true;
+      transferBtn.style.opacity = '0.5';
+      transferBtn.style.cursor = 'not-allowed';
+    }
+
+    // Edit
+    if (editBtn) {
+      editBtn.disabled = true;
+      editBtn.style.opacity = '0.5';
+      editBtn.style.cursor = 'not-allowed';
+    }
+
+    // Status
+    var statusSelect =
+      document.getElementById('detailStatusSelect');
+
+    if (statusSelect) {
+      statusSelect.disabled = true;
+    }
+
+    /*
+     * If somehow currently editing,
+     * return to view mode.
+     */
+
+    if (
+      typeof isEditMode !== 'undefined' &&
+      isEditMode === true
+    ) {
+
+      if (typeof setViewMode === 'function') {
+        setViewMode();
+      }
+    }
+
+    return;
+  }
+
+  /*
+   * ==========================================
+   * NOT PENDING = RESTORE BUTTONS
+   * ==========================================
+   */
+
+  if (transferBtn) {
+    transferBtn.disabled = false;
+    transferBtn.style.opacity = '1';
+    transferBtn.style.cursor = 'pointer';
+  }
+
+  if (editBtn) {
+    editBtn.disabled = false;
+    editBtn.style.opacity = '1';
+    editBtn.style.cursor = 'pointer';
+  }
+
 }
 
 // ========== REMARKS & ACTIVITY ==========

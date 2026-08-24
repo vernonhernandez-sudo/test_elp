@@ -943,44 +943,17 @@ function createTransferRequest(sessionId, entryId, targetAgentId, reason) {
      * =====================================================
      */
 
-    /*
- * =====================================================
- * TRANSFER STATUS RULE
- *
- * Only these statuses can be transferred:
- * - Pipe
- * - VM
- * - DNC
- * - Exclusive
- *
- * No Status and Sold cannot be transferred.
- * =====================================================
- */
+    var currentStatus = entryRow[8]
+      ? entryRow[8].toString().trim()
+      : '';
 
-var currentStatus = entryRow[8] == null
-  ? ''
-  : String(entryRow[8]).trim();
+    if (currentStatus === 'Sold') {
 
-  console.log(
-  'Transfer check - Entry ID: ' + entryId +
-  ' | Current Status: [' + currentStatus + ']'
-);
-
-var transferableStatuses = {
-  'Pipe': true,
-  'VM': true,
-  'DNC': true,
-  'Exclusive': true
-};
-
-if (!transferableStatuses[currentStatus]) {
-
-  return {
-    success: false,
-    message:
-      'Only leads with Pipe, VM, DNC, or Exclusive status can be transferred.'
-  };
-}
+      return {
+        success: false,
+        message: 'Sold leads cannot be transferred.'
+      };
+    }
 
     /*
      * =====================================================
@@ -1188,6 +1161,145 @@ if (!transferableStatuses[currentStatus]) {
   }
 }
 
+// ========== CHECK PENDING TRANSFER ==========
+
+function getPendingTransferForEntry(sessionId, entryId) {
+
+  try {
+
+    var user = getUserFromCache(sessionId);
+
+    if (!user) {
+      return {
+        success: false,
+        pending: false,
+        message: 'Session expired.'
+      };
+    }
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var transferSheet = ss.getSheetByName('TransferRequests');
+
+    if (!transferSheet) {
+      return {
+        success: false,
+        pending: false,
+        message: 'TransferRequests sheet not found.'
+      };
+    }
+
+    var data = transferSheet.getDataRange().getValues();
+
+    /*
+     * No transfer requests yet.
+     */
+    if (data.length <= 1) {
+
+      return {
+        success: true,
+        pending: false
+      };
+
+    }
+
+    /*
+     * Remove header.
+     */
+    data.shift();
+
+    /*
+     * TransferRequests columns:
+     *
+     * [0] RequestID
+     * [1] EntryID
+     * [2] FromAgentID
+     * [3] FromAgentName
+     * [4] ToAgentID
+     * [5] ToAgentName
+     * [6] RequestedByID
+     * [7] RequestedByName
+     * [8] RequestedAt
+     * [9] Status
+     * [10] ReviewedByID
+     * [11] ReviewedByName
+     * [12] ReviewedAt
+     * [13] Reason
+     * [14] ReviewNote
+     */
+
+    for (var i = 0; i < data.length; i++) {
+
+      var row = data[i];
+
+      var requestEntryId =
+        row[1] == null
+          ? ''
+          : String(row[1]).trim();
+
+      var requestStatus =
+        row[9] == null
+          ? ''
+          : String(row[9]).trim();
+
+      if (
+        requestEntryId === String(entryId).trim() &&
+        requestStatus === 'Pending'
+      ) {
+
+        return {
+          success: true,
+          pending: true,
+
+          request: {
+            requestId: row[0],
+            entryId: row[1],
+
+            fromAgentId: row[2],
+            fromAgentName: row[3],
+
+            toAgentId: row[4],
+            toAgentName: row[5],
+
+            requestedById: row[6],
+            requestedByName: row[7],
+
+            requestedAt: row[8],
+
+            status: row[9],
+
+            reason: row[13] || '',
+            reviewNote: row[14] || ''
+          }
+        };
+      }
+    }
+
+    /*
+     * No pending request found.
+     */
+
+    return {
+      success: true,
+      pending: false
+    };
+
+  } catch (e) {
+
+    console.error(
+      'getPendingTransferForEntry error: ' +
+      e.message +
+      ' | Stack: ' +
+      e.stack
+    );
+
+    return {
+      success: false,
+      pending: false,
+      message: 'Unable to check transfer status.'
+    };
+  }
+}
+
 // ========== PHONE NUMBER FORMATTING ==========
 
 function formatUSPhoneNumber(phone) {
@@ -1196,18 +1308,7 @@ function formatUSPhoneNumber(phone) {
 
   var original = phone.toString().trim();
 
-  // Remove common formatting characters
   var digits = original.replace(/\D/g, '');
-
-  /*
-   * Only format U.S. numbers.
-   *
-   * 10 digits:
-   * 9186917015
-   *
-   * 11 digits beginning with 1:
-   * 19186917015
-   */
 
   if (digits.length === 10) {
 
@@ -1235,11 +1336,6 @@ function formatUSPhoneNumber(phone) {
       digits.substring(6, 10);
 
   }
-
-  /*
-   * Anything that doesn't clearly look like a
-   * U.S. phone number is left unchanged.
-   */
 
   return original;
 }
