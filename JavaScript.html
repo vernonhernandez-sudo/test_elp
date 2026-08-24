@@ -991,24 +991,80 @@ function toggleActivityView() {
   else { showingAllActivity = true; document.getElementById('toggleActivityBtn').textContent = 'Show Remarks Only'; loadEntryActivity(); } 
 }
 
-function loadRemarksOnly() { 
-  if (!selectedEntryId) return; 
-  google.script.run.withSuccessHandler(function(remarks) { 
-    var c = document.getElementById('remarksList'); 
-    if (!remarks || remarks.length === 0) { c.innerHTML = '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No remarks yet.</div>'; return; } 
-    var h = ''; 
-    remarks.forEach(function(r) { 
-      var t = new Date(r.timestamp); 
-      h += '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #e8dcc8;"><div style="display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:600;color:#5d4e37;">'+escapeHtml(r.userName)+'</span><span style="font-size:9px;color:#b8a88a;">'+t.toLocaleString()+'</span></div><div style="font-size:12px;color:#3d3223;">'+escapeHtml(r.remark)+'</div></div>'; 
-    }); 
-    c.innerHTML = h; 
-  })
-.withFailureHandler(function(error) {
+function loadRemarksOnly() {
 
-  handleServerError(error, 'getRemarks');
+  if (!selectedEntryId) return;
 
-})
-.getRemarks(selectedEntryId); 
+  if (!SESSION_ID) {
+    return;
+  }
+
+  google.script.run
+
+    .withSuccessHandler(function(remarks) {
+
+      var c =
+        document.getElementById('remarksList');
+
+      if (!remarks || remarks.length === 0) {
+
+        c.innerHTML =
+          '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No remarks yet.</div>';
+
+        return;
+      }
+
+      var h = '';
+
+      remarks.forEach(function(r) {
+
+        var t = new Date(r.timestamp);
+
+        h +=
+          '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #e8dcc8;">' +
+
+            '<div style="display:flex;justify-content:space-between;">' +
+
+              '<span style="font-size:11px;font-weight:600;color:#5d4e37;">' +
+                escapeHtml(r.userName) +
+              '</span>' +
+
+              '<span style="font-size:9px;color:#b8a88a;">' +
+                t.toLocaleString() +
+              '</span>' +
+
+            '</div>' +
+
+            '<div style="font-size:12px;color:#3d3223;">' +
+              escapeHtml(r.remark) +
+            '</div>' +
+
+          '</div>';
+
+      });
+
+      c.innerHTML = h;
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      handleServerError(error, 'getRemarks');
+
+    })
+
+    /*
+     * IMPORTANT:
+     *
+     * We now send BOTH:
+     * 1. SESSION_ID
+     * 2. selectedEntryId
+     */
+
+    .getRemarks(
+      SESSION_ID,
+      selectedEntryId
+    );
 }
 
 function loadEntryActivity() { 

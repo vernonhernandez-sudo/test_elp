@@ -1172,20 +1172,98 @@ function addRemark(sessionId, entryId, remarkText) {
   } catch(e){return{success:false,message:'Error'};}
 }
 
-function getRemarks(entryId) {
-  try { 
-    var s=SpreadsheetApp.openById(SHEET_ID).getSheetByName('Remarks'); 
-    var d=s.getDataRange().getValues();d.shift();
-    var r=[];
-    for(var i=0;i<d.length;i++){
-      if(d[i][1]==entryId)r.push({
-        id:d[i][0],entryId:d[i][1],timestamp:d[i][2],
-        userId:d[i][3],userName:d[i][4],remark:d[i][5]
-      });
+// ========== GET REMARKS ==========
+
+function getRemarks(sessionId, entryId) {
+
+  try {
+
+    // Verify that the user is logged in
+    var u = getUserFromCache(sessionId);
+
+    if (!u) {
+      return [];
     }
-    r.sort(function(a,b){return new Date(b.timestamp)-new Date(a.timestamp);});
-    return r; 
-  } catch(e){return[];}
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Remarks');
+
+    if (!sheet) {
+      console.error('getRemarks: Remarks sheet not found.');
+      return [];
+    }
+
+    var data = sheet.getDataRange().getValues();
+
+    if (data.length <= 1) {
+      return [];
+    }
+
+    // Remove header row
+    data.shift();
+
+    var remarks = [];
+
+    for (var i = 0; i < data.length; i++) {
+
+      /*
+       * IMPORTANT:
+       *
+       * Remarks belong to the Entry ID.
+       *
+       * We do NOT check the current assigned
+       * Sales Partner here.
+       *
+       * Therefore, if a lead is transferred from
+       * one Sales Partner to another, ALL previous
+       * remarks remain visible.
+       */
+
+      if (String(data[i][1]) === String(entryId)) {
+
+        remarks.push({
+
+          id: data[i][0],
+
+          entryId: data[i][1],
+
+          timestamp: data[i][2],
+
+          userId: data[i][3],
+
+          userName: data[i][4],
+
+          remark: data[i][5]
+
+        });
+
+      }
+
+    }
+
+    // Newest remark first
+    remarks.sort(function(a, b) {
+
+      return new Date(b.timestamp) -
+             new Date(a.timestamp);
+
+    });
+
+    return remarks;
+
+  } catch (e) {
+
+    console.error(
+      'getRemarks failed. Entry ID: ' +
+      entryId +
+      ' | Error: ' +
+      e.message
+    );
+
+    return [];
+
+  }
+
 }
 
 // ========== ACTIVITY ==========
