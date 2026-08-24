@@ -11,9 +11,9 @@ function include(filename) { return HtmlService.createHtmlOutputFromFile(filenam
 // Sales Partner / Lead Gen Specialist shift settings
 const SHIFT_TIMEZONE = 'Asia/Manila';
 const SHIFT_START_HOUR = 0; // 12:00 AM PHT
-const SHIFT_END_HOUR = 9;   // 9:00 AM PHT
+const SHIFT_END_HOUR = 10;   // 10:00 AM PHT
 
-const SESSION_DURATION_MS = 9 * 60 * 60 * 1000 + 30 * 60 * 1000;
+const SESSION_DURATION_MS = 10 * 60 * 60 * 1000 + 30 * 60 * 1000;
 
 /**
  * Returns the current date/time in Philippine Standard Time.
@@ -31,7 +31,7 @@ function getPHTNow() {
  * 2026-08-21 03:00 PHT -> "2026-08-21"
  * 2026-08-21 10:00 PHT -> "2026-08-21"
  *
- * The shift itself is only available from 12 AM to 9 AM.
+ * The shift itself is only available from 12 AM to 10 AM.
  */
 function getCurrentShiftKey() {
   var now = new Date();
@@ -45,7 +45,7 @@ function getCurrentShiftKey() {
 
 /**
  * Checks whether the current time is inside the
- * 12:00 AM - 9:00 AM PHT login window.
+ * 12:00 AM - 10:00 AM PHT login window.
  */
 function isWithinSalesShift() {
   var now = new Date();
@@ -60,7 +60,7 @@ function isWithinSalesShift() {
 /**
  * Gets the end time of the current PHT shift.
  *
- * The shift ends at 9:00 AM PHT on the current date.
+ * The shift ends at 10:00 AM PHT on the current date.
  */
 function getShiftEndTimestamp() {
   var dateString = Utilities.formatDate(
@@ -69,7 +69,7 @@ function getShiftEndTimestamp() {
     'yyyy-MM-dd'
   );
 
-  var shiftEndString = dateString + ' 09:00:00';
+  var shiftEndString = dateString + ' 10:00:00';
 
   var parts = shiftEndString.match(
     /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/
@@ -279,14 +279,14 @@ function loginUser(email, password) {
          * SHIFT LOGIN WINDOW
          *
          * Sales Partner and Lead Gen Specialist can only
-         * START a session between 12 AM and 9 AM PHT.
+         * START a session between 12 AM and 10 AM PHT.
          *
          * IMPORTANT:
          *
          * There is NO one-login-per-shift restriction.
          *
          * They can logout and login again as many times as
-         * they want during the 12 AM - 9 AM window.
+         * they want during the 12 AM - 10 AM window.
          * =================================================
          */
 
@@ -300,7 +300,7 @@ function loginUser(email, password) {
             return {
               success: false,
               message:
-                'Your shift is currently closed. Sales Partner and Lead Gen Specialist accounts can only log in from 12:00 AM to 9:00 AM Philippine Standard Time.'
+                'Your shift is currently closed. Sales Partner and Lead Gen Specialist accounts can only log in from 12:00 AM to 10:00 AM Philippine Standard Time.'
             };
           }
         }
@@ -320,16 +320,16 @@ function loginUser(email, password) {
         /*
          * Default session duration.
          *
-         * We will still cap restricted users at 9 AM below.
+         * We will still cap restricted users at 10 AM below.
          */
         var sessionExpiry =
           loginTime + SESSION_DURATION_MS;
 
         /*
          * =================================================
-         * HARD 9:00 AM CUTOFF
+         * HARD 10:00 AM CUTOFF
          *
-         * Even if SESSION_DURATION_MS goes beyond 9 AM,
+         * Even if SESSION_DURATION_MS goes beyond 10 AM,
          * restricted users can NEVER remain logged in
          * beyond the current shift.
          * =================================================
