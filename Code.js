@@ -1836,3 +1836,99 @@ function getAgentName(id) {
     return 'Unknown'; 
   } catch(e){return'Unknown';} 
 }
+
+// ========== TRANSFER TARGETS ==========
+
+function getTransferTargets(sessionId) {
+  try {
+
+    var user = getUserFromCache(sessionId);
+
+    if (!user) {
+      return {
+        success: false,
+        targets: [],
+        message: 'Session expired.'
+      };
+    }
+
+    if (user.role !== 'Sales Partner') {
+      return {
+        success: false,
+        targets: [],
+        message: 'You are not authorized to request a transfer.'
+      };
+    }
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Agents');
+
+    if (!sheet) {
+      return {
+        success: false,
+        targets: [],
+        message: 'Agents sheet not found.'
+      };
+    }
+
+    var data = sheet.getDataRange().getValues();
+
+    data.shift();
+
+    var targets = [];
+
+    for (var i = 0; i < data.length; i++) {
+
+      var row = data[i];
+
+      var agentId = row[0];
+
+      var name = row[3]
+        ? row[3].toString().trim()
+        : '';
+
+      var role = row[7]
+        ? row[7].toString().trim()
+        : '';
+
+      var status = row[8]
+        ? row[8].toString().trim()
+        : '';
+
+      if (
+        status !== 'Active' ||
+        (role !== 'Admin' && role !== 'Sales Partner')
+      ) {
+        continue;
+      }
+
+      if (String(agentId) === String(user.id)) {
+        continue;
+      }
+
+      targets.push({
+        id: agentId,
+        name: name,
+        role: role
+      });
+    }
+
+    return {
+      success: true,
+      targets: targets
+    };
+
+  } catch (e) {
+
+    console.error(
+      'getTransferTargets error: ' +
+      e.message
+    );
+
+    return {
+      success: false,
+      targets: [],
+      message: 'Unable to load transfer targets: ' + e.message
+    };
+  }
+}

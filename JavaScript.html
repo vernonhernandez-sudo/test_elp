@@ -1322,7 +1322,7 @@ function updateStatusDropdownPermissions(entry) {
 
   if (
     currentUser.role === 'Super Admin' ||
-    currentUser.role === 'Superadmin'
+    currentUser.role === 'Super Admin'
   ) {
 
     return;
@@ -1759,13 +1759,17 @@ function loadTransferTargets() {
 
     .withSuccessHandler(function(r) {
 
+      console.log('getTransferTargets response:', r);
+
       select.innerHTML =
         '<option value="">Select Admin or Sales Partner</option>';
 
       if (!r || !r.success) {
 
         select.innerHTML =
-          '<option value="">Unable to load targets</option>';
+          '<option value="">ERROR: ' +
+          ((r && r.message) || 'Unknown error') +
+          '</option>';
 
         return;
       }
@@ -1800,17 +1804,14 @@ function loadTransferTargets() {
     .withFailureHandler(function(error) {
 
       console.error(
-        'loadTransferTargets failed:',
+        'getTransferTargets FAILED:',
         error
       );
 
       select.innerHTML =
-        '<option value="">Unable to load targets</option>';
-
-      handleServerError(
-        error,
-        'getTransferTargets'
-      );
+        '<option value="">ERROR: ' +
+        (error.message || error.toString()) +
+        '</option>';
 
     })
 
