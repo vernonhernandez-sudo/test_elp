@@ -1266,58 +1266,167 @@ function getRemarks(sessionId, entryId) {
 
 }
 
-// ========== ACTIVITY ==========
-function getEntryActivity(entryId) {
+// ========== GET ENTRY ACTIVITY ==========
+
+function getEntryActivity(sessionId, entryId) {
+
   try {
-    var ss = SpreadsheetApp.openById(SHEET_ID);
 
-    var remarksSheet = ss.getSheetByName('Remarks');
-    var activitySheet = ss.getSheetByName('ActivityLog');
+    /*
+     * ==========================================
+     * VERIFY LOGIN SESSION
+     * ==========================================
+     */
 
-    if (!remarksSheet || !activitySheet) {
-      console.error('getEntryActivity: Required sheet not found.');
+    var u = getUserFromCache(sessionId);
+
+    if (!u) {
       return [];
     }
 
-    var rs = remarksSheet.getDataRange().getValues();
-    var as = activitySheet.getDataRange().getValues();
+    var ss = SpreadsheetApp.openById(SHEET_ID);
 
-    if (rs.length > 0) rs.shift();
-    if (as.length > 0) as.shift();
+    var remarksSheet =
+      ss.getSheetByName('Remarks');
+
+    var activitySheet =
+      ss.getSheetByName('ActivityLog');
+
+    if (!remarksSheet || !activitySheet) {
+
+      console.error(
+        'getEntryActivity: Required sheet not found.'
+      );
+
+      return [];
+    }
+
+    var remarksData =
+      remarksSheet.getDataRange().getValues();
+
+    var activityData =
+      activitySheet.getDataRange().getValues();
+
+    /*
+     * Remove header rows.
+     */
+
+    if (remarksData.length > 0) {
+      remarksData.shift();
+    }
+
+    if (activityData.length > 0) {
+      activityData.shift();
+    }
 
     var items = [];
 
-    // Get remarks
-    for (var i = 0; i < rs.length; i++) {
-      if (rs[i][1] == entryId) {
-        items.push({
-          type: 'remark',
-          timestamp: rs[i][2],
-          userName: rs[i][4],
-          content: rs[i][5]
-        });
-      }
-    }
+    /*
+     * ==========================================
+     * GET ALL REMARKS FOR THIS ENTRY
+     * ==========================================
+     *
+     * IMPORTANT:
+     *
+     * We only check Entry ID.
+     *
+     * We do NOT check:
+     *
+     * - Current assigned Sales Partner
+     * - Who currently owns the lead
+     * - Who mined the lead
+     *
+     * Therefore all historical remarks remain
+     * attached to this Entry.
+     */
 
-    // Get activity
-    for (var j = 0; j < as.length; j++) {
+    for (var i = 0; i < remarksData.length; i++) {
+
       if (
-        as[j][3] &&
-        as[j][3].toString().indexOf('#' + entryId) > -1
+        String(remarksData[i][1]) ===
+        String(entryId)
       ) {
+
         items.push({
-          type: 'activity',
-          timestamp: as[j][4],
-          userName: as[j][2],
-          content: as[j][3]
+
+          type: 'remark',
+
+          timestamp: remarksData[i][2],
+
+          userName: remarksData[i][4],
+
+          content: remarksData[i][5]
+
         });
+
       }
+
     }
 
-    // Newest activity first
+    /*
+     * ==========================================
+     * GET ALL ACTIVITY FOR THIS ENTRY
+     * ==========================================
+     *
+     * Your current ActivityLog stores the
+     * Entry ID inside the Action text.
+     *
+     * Example:
+     *
+     * "Status #123 to Pipe"
+     *
+     * "Added remark to #123"
+     *
+     * Until we redesign the ActivityLog columns,
+     * we will continue using this method.
+     */
+
+    for (var j = 0; j < activityData.length; j++) {
+
+      var action =
+        activityData[j][3]
+          ? activityData[j][3].toString()
+          : '';
+
+      if (
+        action.indexOf(
+          '#' + entryId
+        ) > -1
+      ) {
+
+        items.push({
+
+          type: 'activity',
+
+          timestamp: activityData[j][4],
+
+          userName: activityData[j][2],
+
+          content: action
+
+        });
+
+      }
+
+    }
+
+    /*
+     * ==========================================
+     * NEWEST FIRST
+     * ==========================================
+     */
+
     items.sort(function(a, b) {
-      return new Date(b.timestamp) - new Date(a.timestamp);
+
+      return new Date(b.timestamp) -
+             new Date(a.timestamp);
+
     });
+
+    /*
+     * Limit the result to the newest 50
+     * activities.
+     */
 
     return items.slice(0, 50);
 
@@ -1333,7 +1442,9 @@ function getEntryActivity(entryId) {
     );
 
     return [];
+
   }
+
 }
 
 function logActivity(uid, un, action) {

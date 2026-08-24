@@ -1067,25 +1067,95 @@ function loadRemarksOnly() {
     );
 }
 
-function loadEntryActivity() { 
-  if (!selectedEntryId) return; 
-  google.script.run.withSuccessHandler(function(items) { 
-    var c = document.getElementById('remarksList'); 
-    if (!items || items.length === 0) { c.innerHTML = '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No activity yet.</div>'; return; } 
-    var h = ''; 
-    items.forEach(function(item) { 
-      var t = new Date(item.timestamp); 
-      var bg = item.type === 'activity' ? '#f0f4f8' : 'white'; 
-      h += '<div style="background:'+bg+';border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid '+(item.type==='activity'?'#c8d6e5':'#e8dcc8')+';"><div style="display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:600;color:#5d4e37;">'+escapeHtml(item.userName)+'</span><span style="font-size:9px;color:#b8a88a;">'+t.toLocaleString()+'</span></div><div style="font-size:12px;color:#3d3223;">'+item.content+'</div></div>'; 
-    }); 
-    c.innerHTML = h; 
-  })
-.withFailureHandler(function(error) {
+function loadEntryActivity() {
 
-  handleServerError(error, 'getEntryActivity');
+  if (!selectedEntryId) return;
 
-})
-.getEntryActivity(selectedEntryId); 
+  if (!SESSION_ID) {
+    return;
+  }
+
+  google.script.run
+
+    .withSuccessHandler(function(items) {
+
+      var c =
+        document.getElementById('remarksList');
+
+      if (!items || items.length === 0) {
+
+        c.innerHTML =
+          '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No activity yet.</div>';
+
+        return;
+      }
+
+      var h = '';
+
+      items.forEach(function(item) {
+
+        var t = new Date(item.timestamp);
+
+        var bg =
+          item.type === 'activity'
+            ? '#f0f4f8'
+            : 'white';
+
+        var border =
+          item.type === 'activity'
+            ? '#c8d6e5'
+            : '#e8dcc8';
+
+        h +=
+          '<div style="background:' + bg +
+          ';border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid ' +
+          border + ';">' +
+
+            '<div style="display:flex;justify-content:space-between;">' +
+
+              '<span style="font-size:11px;font-weight:600;color:#5d4e37;">' +
+                escapeHtml(item.userName) +
+              '</span>' +
+
+              '<span style="font-size:9px;color:#b8a88a;">' +
+                t.toLocaleString() +
+              '</span>' +
+
+            '</div>' +
+
+            '<div style="font-size:12px;color:#3d3223;">' +
+              escapeHtml(item.content) +
+            '</div>' +
+
+          '</div>';
+
+      });
+
+      c.innerHTML = h;
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      handleServerError(
+        error,
+        'getEntryActivity'
+      );
+
+    })
+
+    /*
+     * IMPORTANT:
+     *
+     * Send:
+     * 1. SESSION_ID
+     * 2. selectedEntryId
+     */
+
+    .getEntryActivity(
+      SESSION_ID,
+      selectedEntryId
+    );
 }
 
 function addRemark() {
