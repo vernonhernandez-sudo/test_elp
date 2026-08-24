@@ -140,7 +140,11 @@ function removeStoredSession(sessionId) {
  * Determines whether a user is subject to shift restrictions.
  */
 function isShiftRestrictedRole(role) {
-  return role === 'Sales Partner' ||
+
+  role = role ? role.toString().trim() : '';
+
+  return role === 'Admin' ||
+         role === 'Sales Partner' ||
          role === 'Lead Gen Specialist';
 }
 
@@ -300,7 +304,7 @@ function loginUser(email, password) {
             return {
               success: false,
               message:
-                'Your shift is currently closed. Sales Partner and Lead Gen Specialist accounts can only log in from 12:00 AM to 10:00 AM Philippine Standard Time.'
+                'Your shift is currently closed. Admin, Sales Partner, and Lead Gen Specialist accounts can only log in from 12:00 AM to 10:00 AM Philippine Standard Time.'
             };
           }
         }
@@ -532,7 +536,7 @@ function canAccessEntry(user, entryAssignedAgentId) {
   var role = user.role ? user.role.toString().trim() : '';
 
   // Superadmin and Admin can access all entries
-  if (role === 'Superadmin' || role === 'Admin') {
+  if (role === 'Super Admin' || role === 'Admin') {
     return true;
   }
 
