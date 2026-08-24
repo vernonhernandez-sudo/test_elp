@@ -943,39 +943,39 @@ function createTransferRequest(sessionId, entryId, targetAgentId, reason) {
      * =====================================================
      */
 
-          /*
-      * =====================================================
-      * TRANSFER STATUS RULE
-      *
-      * Only these statuses can be transferred:
-      * - Pipe
-      * - VM
-      * - DNC
-      * - Exclusive
-      *
-      * No Status and Sold cannot be transferred.
-      * =====================================================
-      */
+    /*
+ * =====================================================
+ * TRANSFER STATUS RULE
+ *
+ * Only these statuses can be transferred:
+ * - Pipe
+ * - VM
+ * - DNC
+ * - Exclusive
+ *
+ * No Status and Sold cannot be transferred.
+ * =====================================================
+ */
 
-      var currentStatus = entryRow[8]
-        ? entryRow[8].toString().trim()
-        : '';
+var currentStatus = entryRow[8]
+  ? entryRow[8].toString().trim()
+  : '';
 
-      var transferableStatuses = [
-        'Pipe',
-        'VM',
-        'DNC',
-        'Exclusive'
-      ];
+var transferableStatuses = [
+  'Pipe',
+  'VM',
+  'DNC',
+  'Exclusive'
+];
 
-      if (transferableStatuses.indexOf(currentStatus) === -1) {
+if (transferableStatuses.indexOf(currentStatus) === -1) {
 
-        return {
-          success: false,
-          message:
-            'Only leads with Pipe, VM, DNC, or Exclusive status can be transferred.'
-        };
-      }
+  return {
+    success: false,
+    message:
+      'Only leads with Pipe, VM, DNC, or Exclusive status can be transferred.'
+  };
+}
 
     /*
      * =====================================================
