@@ -864,7 +864,7 @@ function updateStatusDropdownPermissions(entry) {
   var select =
     document.getElementById('detailStatusSelect');
 
-  if (!select) return;
+  if (!select || !entry) return;
 
   /*
    * ==========================================
@@ -890,12 +890,13 @@ function updateStatusDropdownPermissions(entry) {
    * ==========================================
    * SOLD = FINAL STATUS
    *
-   * Once an entry is Sold, the entire status
-   * dropdown is permanently disabled.
+   * Once Sold, the entire dropdown is locked.
    * ==========================================
    */
 
-  if (entry.status === 'Sold') {
+  if (
+    String(entry.status || '').trim() === 'Sold'
+  ) {
 
     select.disabled = true;
 
@@ -904,63 +905,33 @@ function updateStatusDropdownPermissions(entry) {
 
   /*
    * ==========================================
-   * ADMIN / SUPER ADMIN
-   *
-   * Full status access unless Sold.
-   * ==========================================
-   */
-
-  if (
-    currentUser.role === 'Admin' ||
-    currentUser.role === 'Super Admin'
-  ) {
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * ONLY SALES PARTNER HAS OWNERSHIP
-   * RESTRICTIONS
-   * ==========================================
-   */
-
-  if (currentUser.role !== 'Sales Partner') {
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * CHECK LEAD OWNER
+   * LEAD INFORMATION
    * ==========================================
    */
 
   var minedById =
-    entry.minedById || '';
+    entry.minedById
+      ? String(entry.minedById).trim()
+      : '';
+
+  var currentUserId =
+    currentUser.id
+      ? String(currentUser.id).trim()
+      : '';
 
   var isOwnLead =
-    String(minedById) ===
-    String(currentUser.id);
+    minedById !== '' &&
+    currentUserId !== '' &&
+    minedById === currentUserId;
 
-  /*
-   * Their own lead:
-   *
-   * Everything is allowed.
-   */
-
-  if (isOwnLead) {
-
-    return;
-  }
+  var currentStatus =
+    entry.status
+      ? String(entry.status).trim()
+      : '';
 
   /*
    * ==========================================
-   * ANOTHER PERSON'S LEAD
-   *
-   * Disable:
-   * - No Status
-   * - Exclusive
+   * FIND STATUS OPTIONS
    * ==========================================
    */
 
@@ -974,15 +945,141 @@ function updateStatusDropdownPermissions(entry) {
       'option[value="Exclusive"]'
     );
 
-  if (noStatusOption) {
+  /*
+   * ==========================================
+   * SUPER ADMIN
+   *
+   * Super Admin has full control.
+   *
+   * Exception:
+   * Sold is already handled above and is
+   * permanently locked.
+   * ==========================================
+   */
 
-    noStatusOption.disabled = true;
+  if (
+    currentUser.role === 'Super Admin' ||
+    currentUser.role === 'Superadmin'
+  ) {
+
+    return;
   }
 
-  if (exclusiveOption) {
+  /*
+   * ==========================================
+   * ADMIN
+   *
+   * Admin can manage statuses, BUT:
+   *
+   * If Admin personally mined this lead,
+   * the lead is an Exclusive lead and
+   * No Status must not be available.
+   * ==========================================
+   */
 
-    exclusiveOption.disabled = true;
+  if (currentUser.role === 'Admin') {
+
+    if (isOwnLead) {
+
+      /*
+       * Personally mined Admin lead.
+       *
+       * It starts as Exclusive.
+       * No Status must never be selectable.
+       */
+
+      if (noStatusOption) {
+        noStatusOption.disabled = true;
+      }
+
+    }
+
+    return;
   }
+
+  /*
+   * ==========================================
+   * SALES PARTNER
+   * ==========================================
+   */
+
+  if (currentUser.role === 'Sales Partner') {
+
+    /*
+     * ========================================
+     * SALES PARTNER'S OWN LEAD
+     * ========================================
+     *
+     * Their personally mined lead starts as:
+     *
+     * Exclusive
+     *
+     * Therefore:
+     *
+     * No Status = DISABLED
+     * Exclusive = current/initial status
+     *
+     * Other statuses remain available.
+     */
+
+    if (isOwnLead) {
+
+      if (noStatusOption) {
+        noStatusOption.disabled = true;
+      }
+
+      return;
+    }
+
+    /*
+     * ========================================
+     * ANOTHER PERSON'S LEAD
+     * ========================================
+     *
+     * Lead Gen Specialist leads:
+     *
+     * No Status = only available while
+     * the lead is still unprocessed.
+     *
+     * Once another status is selected,
+     * No Status becomes unavailable.
+     *
+     * Exclusive is not available.
+     */
+
+    if (noStatusOption) {
+
+      /*
+       * If it already has a status,
+       * it cannot return to No Status.
+       */
+
+      if (currentStatus !== '') {
+        noStatusOption.disabled = true;
+      }
+    }
+
+    /*
+     * Sales Partner cannot manually make
+     * another person's lead Exclusive.
+     */
+
+    if (exclusiveOption) {
+      exclusiveOption.disabled = true;
+    }
+
+    return;
+  }
+
+  /*
+   * ==========================================
+   * OTHER ROLES
+   * ==========================================
+   *
+   * No additional restrictions.
+   */
+
+  return;
 }
 
 // ========== REMARKS & ACTIVITY ==========
