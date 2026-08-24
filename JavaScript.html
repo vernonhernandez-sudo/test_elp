@@ -1721,10 +1721,8 @@ function openTransferModal() {
    * Display current lead
    */
   document.getElementById('transferLeadInfo').textContent =
-    '#' +
-    selectedEntryData.id +
-    ' - ' +
-    (selectedEntryData.authorName || 'Unnamed Lead');
+  'Author - ' +
+  (selectedEntryData.authorName || 'Unnamed Lead');
 
   /*
    * Open modal first.
