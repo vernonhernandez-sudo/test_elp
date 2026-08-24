@@ -957,18 +957,23 @@ function createTransferRequest(sessionId, entryId, targetAgentId, reason) {
  * =====================================================
  */
 
-var currentStatus = entryRow[8]
-  ? entryRow[8].toString().trim()
-  : '';
+var currentStatus = entryRow[8] == null
+  ? ''
+  : String(entryRow[8]).trim();
 
-var transferableStatuses = [
-  'Pipe',
-  'VM',
-  'DNC',
-  'Exclusive'
-];
+  console.log(
+  'Transfer check - Entry ID: ' + entryId +
+  ' | Current Status: [' + currentStatus + ']'
+);
 
-if (transferableStatuses.indexOf(currentStatus) === -1) {
+var transferableStatuses = {
+  'Pipe': true,
+  'VM': true,
+  'DNC': true,
+  'Exclusive': true
+};
+
+if (!transferableStatuses[currentStatus]) {
 
   return {
     success: false,
