@@ -850,6 +850,317 @@ function getTransferTargets(sessionId) {
   }
 }
 
+// ========== CREATE TRANSFER REQUEST ==========
+
+function createTransferRequest(sessionId, entryId, targetAgentId, reason) {
+
+  try {
+
+    var user = getUserFromCache(sessionId);
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'Session expired.'
+      };
+    }
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+
+    var entriesSheet = ss.getSheetByName('Entries');
+    var agentsSheet = ss.getSheetByName('Agents');
+    var transferSheet = ss.getSheetByName('TransferRequests');
+
+    if (!entriesSheet || !agentsSheet || !transferSheet) {
+      return {
+        success: false,
+        message: 'Required sheet not found.'
+      };
+    }
+
+    /*
+     * =====================================================
+     * FIND ENTRY
+     * =====================================================
+     */
+
+    var entryData = entriesSheet.getDataRange().getValues();
+
+    var entryRow = null;
+
+    for (var i = 1; i < entryData.length; i++) {
+
+      if (
+        String(entryData[i][0]) ===
+        String(entryId)
+      ) {
+
+        entryRow = entryData[i];
+        break;
+      }
+    }
+
+    if (!entryRow) {
+      return {
+        success: false,
+        message: 'Entry not found.'
+      };
+    }
+
+    /*
+     * =====================================================
+     * CHECK CURRENT OWNER
+     * =====================================================
+     *
+     * Entries:
+     *
+     * [7] Assigned Agent ID
+     * [8] Status
+     * [12] Mined By
+     */
+
+    var assignedAgentId = entryRow[7];
+
+    /*
+     * Only the current assigned Sales Partner
+     * can request the transfer.
+     */
+
+    if (
+      user.role === 'Sales Partner' &&
+      String(assignedAgentId) !== String(user.id)
+    ) {
+
+      return {
+        success: false,
+        message: 'You can only transfer leads assigned to you.'
+      };
+    }
+
+    /*
+     * =====================================================
+     * SOLD LEADS CANNOT BE TRANSFERRED
+     * =====================================================
+     */
+
+    var currentStatus = entryRow[8]
+      ? entryRow[8].toString().trim()
+      : '';
+
+    if (currentStatus === 'Sold') {
+
+      return {
+        success: false,
+        message: 'Sold leads cannot be transferred.'
+      };
+    }
+
+    /*
+     * =====================================================
+     * FIND TARGET AGENT
+     * =====================================================
+     */
+
+    var agentData = agentsSheet.getDataRange().getValues();
+
+    var targetAgent = null;
+
+    for (var j = 1; j < agentData.length; j++) {
+
+      if (
+        String(agentData[j][0]) ===
+        String(targetAgentId)
+      ) {
+
+        targetAgent = agentData[j];
+        break;
+      }
+    }
+
+    if (!targetAgent) {
+
+      return {
+        success: false,
+        message: 'Transfer target not found.'
+      };
+    }
+
+    var targetId = targetAgent[0];
+
+    var targetName = targetAgent[3];
+
+    var targetRole = targetAgent[7]
+      ? targetAgent[7].toString().trim()
+      : '';
+
+    var targetStatus = targetAgent[8]
+      ? targetAgent[8].toString().trim()
+      : '';
+
+    /*
+     * =====================================================
+     * TARGET VALIDATION
+     * =====================================================
+     */
+
+    if (targetStatus !== 'Active') {
+
+      return {
+        success: false,
+        message: 'The selected agent is not active.'
+      };
+    }
+
+    if (
+      targetRole !== 'Sales Partner' &&
+      targetRole !== 'Admin'
+    ) {
+
+      return {
+        success: false,
+        message: 'Invalid transfer target.'
+      };
+    }
+
+    /*
+     * Cannot transfer to yourself.
+     */
+
+    if (
+      String(targetId) ===
+      String(user.id)
+    ) {
+
+      return {
+        success: false,
+        message: 'You cannot transfer a lead to yourself.'
+      };
+    }
+
+    /*
+     * =====================================================
+     * CHECK FOR EXISTING PENDING REQUEST
+     * =====================================================
+     */
+
+    var transferData =
+      transferSheet.getDataRange().getValues();
+
+    for (var k = 1; k < transferData.length; k++) {
+
+      var existingEntryId = transferData[k][1];
+
+      var existingStatus = transferData[k][9]
+        ? transferData[k][9].toString().trim()
+        : '';
+
+      if (
+        String(existingEntryId) ===
+        String(entryId) &&
+        existingStatus === 'Pending'
+      ) {
+
+        return {
+          success: false,
+          message: 'This lead already has a pending transfer request.'
+        };
+      }
+    }
+
+    /*
+     * =====================================================
+     * GENERATE REQUEST ID
+     * =====================================================
+     */
+
+    var requestId =
+      'TR-' +
+      new Date().getTime();
+
+    /*
+     * =====================================================
+     * SAVE REQUEST
+     * =====================================================
+     */
+
+    transferSheet.appendRow([
+
+      requestId,             // A RequestID
+      entryId,               // B EntryID
+
+      user.id,               // C FromAgentID
+      user.name,             // D FromAgentName
+
+      targetId,              // E ToAgentID
+      targetName,            // F ToAgentName
+
+      user.id,               // G RequestedByID
+      user.name,             // H RequestedByName
+
+      new Date().toISOString(), // I RequestedAt
+
+      'Pending',             // J Status
+
+      '',                    // K ReviewedByID
+      '',                    // L ReviewedByName
+      '',                    // M ReviewedAt
+
+      reason
+        ? reason.toString().trim()
+        : '',                // N Reason
+
+      ''                     // O ReviewNote
+    ]);
+
+    /*
+     * =====================================================
+     * ACTIVITY LOG
+     * =====================================================
+     */
+
+    logActivity(
+      user.id,
+      user.name,
+      'Requested transfer of #' +
+      entryId +
+      ' to ' +
+      targetName
+    );
+
+    /*
+     * SYSTEM REMARK
+     */
+
+    addSystemRemark(
+      entryId,
+      user.name,
+      'Transfer requested to ' +
+      targetName +
+      '. Awaiting Admin approval.'
+    );
+
+    return {
+      success: true,
+      message: 'Transfer request submitted for approval.',
+      requestId: requestId
+    };
+
+  } catch (e) {
+
+    console.error(
+      'createTransferRequest error: ' +
+      e.message +
+      ' | Stack: ' +
+      e.stack
+    );
+
+    return {
+      success: false,
+      message: 'Unable to create transfer request.'
+    };
+  }
+}
+
 // ========== PHONE NUMBER FORMATTING ==========
 
 function formatUSPhoneNumber(phone) {
