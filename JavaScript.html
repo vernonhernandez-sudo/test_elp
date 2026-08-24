@@ -1679,4 +1679,36 @@ document.addEventListener('DOMContentLoaded', function() {
     var el = document.getElementById(id); if (el) el.addEventListener('input', updateEntrySubmitButton); 
   });
 });
+
+// ========== TRANSFER MODAL ==========
+
+function openTransferModal() {
+
+  if (!selectedEntryData) {
+    showToast('Please select a lead first.', 'error');
+    return;
+  }
+
+  // Reset fields
+  document.getElementById('transferTarget').value = '';
+  document.getElementById('transferReason').value = '';
+
+  document.getElementById('transferError').style.display = 'none';
+
+  // Display current lead
+  document.getElementById('transferLeadInfo').textContent =
+    '#' + selectedEntryData.id +
+    ' - ' +
+    (selectedEntryData.authorName || 'Unnamed Lead');
+
+  // Open modal
+  document.getElementById('transferLeadModal').style.display = 'flex';
+}
+
+
+function closeTransferModal() {
+
+  document.getElementById('transferLeadModal').style.display = 'none';
+
+}
 </script>
