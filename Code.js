@@ -653,11 +653,17 @@ function addEntry(sessionId, entryData) {
      */
     var initialStatus = '';
 
+    var initialStatus = '';
+
     if (
       userRole === 'Admin' ||
       userRole === 'Sales Partner'
     ) {
       initialStatus = 'Exclusive';
+    } else if (
+      userRole === 'Lead Gen Specialist'
+    ) {
+      initialStatus = '';
     }
 
     // Format U.S. phone numbers before saving
@@ -882,22 +888,64 @@ function updateEntry(sessionId, entryId, entryData) {
 
 // ========== ENTRY ACCESS CONTROL ==========
 
-function canAccessEntry(user, entryAssignedAgentId) {
+function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
+
   if (!user) return false;
 
-  var role = user.role ? user.role.toString().trim() : '';
+  var role =
+    user.role
+      ? user.role.toString().trim()
+      : '';
 
-  // Superadmin and Admin can access all entries
-  if (role === 'Superadmin' || role === 'Admin') {
+  /*
+   * =====================================================
+   * SUPER ADMIN / ADMIN
+   *
+   * Can see every entry.
+   * =====================================================
+   */
+
+  if (
+    role === 'Super Admin' ||
+    role === 'Admin'
+  ) {
     return true;
   }
 
-  // Sales Partner can ONLY access their own assigned leads
+  /*
+   * =====================================================
+   * SALES PARTNER
+   *
+   * Can see:
+   *
+   * 1. Leads assigned to them
+   * 2. Leads they personally mined
+   *
+   * This is important because Sales Partner-created
+   * entries have no Assigned Agent yet.
+   * =====================================================
+   */
+
   if (role === 'Sales Partner') {
-    return String(entryAssignedAgentId) === String(user.id);
+
+    var isAssignedToUser =
+      String(entryAssignedAgentId) === String(user.id);
+
+    var isMinedByUser =
+      String(entryMinedById) === String(user.id);
+
+    return isAssignedToUser || isMinedByUser;
   }
 
-  // Lead Gen Specialist will be handled later
+  /*
+   * =====================================================
+   * LEAD GEN SPECIALIST
+   *
+   * Will be handled separately when we implement
+   * Lead Gen Specialist access/distribution.
+   * =====================================================
+   */
+
   if (role === 'Lead Gen Specialist') {
     return false;
   }
@@ -966,11 +1014,15 @@ function getEntries(sessionId) {
 
     for (var i = 0; i < ed.length; i++) {
 
+      //This line of codes checked both assigned leads and mined by
       var assignedAgentId = ed[i][7];
+      var minedById = ed[i][12];
 
-      // IMPORTANT:
-      // Only return entries this user is allowed to see.
-      if (!canAccessEntry(u, assignedAgentId)) {
+      if (!canAccessEntry(
+        u,
+        assignedAgentId,
+        minedById
+      )) {
         continue;
       }
 
