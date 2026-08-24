@@ -660,11 +660,15 @@ function addEntry(sessionId, entryData) {
       initialStatus = 'Exclusive';
     }
 
+    // Format U.S. phone numbers before saving
+    var formattedPhones =
+      formatUSPhoneNumbers(entryData.phones);
+
     // Add the new entry
     sheet.appendRow([
       newEntryId,                  // A - ID
       entryData.authorName,        // B - Author
-      entryData.phones || '',      // C - Phones
+      formattedPhones,             // C - Phones
       entryData.email || '',       // D - Email
       entryData.book,              // E - Book
       entryData.isbn,              // F - ISBN
@@ -710,6 +714,75 @@ function addEntry(sessionId, entryData) {
       message: 'Unable to add entry.'
     };
   }
+}
+
+// ========== PHONE NUMBER FORMATTING ==========
+
+function formatUSPhoneNumber(phone) {
+
+  if (!phone) return '';
+
+  var original = phone.toString().trim();
+
+  // Remove common formatting characters
+  var digits = original.replace(/\D/g, '');
+
+  /*
+   * Only format U.S. numbers.
+   *
+   * 10 digits:
+   * 9186917015
+   *
+   * 11 digits beginning with 1:
+   * 19186917015
+   */
+
+  if (digits.length === 10) {
+
+    return '(' +
+      digits.substring(0, 3) +
+      ') ' +
+      digits.substring(3, 6) +
+      '-' +
+      digits.substring(6, 10);
+
+  }
+
+  if (
+    digits.length === 11 &&
+    digits.charAt(0) === '1'
+  ) {
+
+    digits = digits.substring(1);
+
+    return '(' +
+      digits.substring(0, 3) +
+      ') ' +
+      digits.substring(3, 6) +
+      '-' +
+      digits.substring(6, 10);
+
+  }
+
+  /*
+   * Anything that doesn't clearly look like a
+   * U.S. phone number is left unchanged.
+   */
+
+  return original;
+}
+
+function formatUSPhoneNumbers(phones) {
+
+  if (!phones) return '';
+
+  return phones
+    .toString()
+    .split(',')
+    .map(function(phone) {
+      return formatUSPhoneNumber(phone);
+    })
+    .join(', ');
 }
 
 function updateEntry(sessionId, entryId, entryData) {
