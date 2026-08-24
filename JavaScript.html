@@ -543,7 +543,7 @@ function renderTable(entries) {
       '<td style="padding:9px 12px;font-weight:500;text-align:center;">'+escapeHtml(e.authorName)+'</td>' +
       '<td style="padding:9px 12px;color:#555;text-align:center;">'+escapeHtml(e.book)+'</td>' +
       '<td style="padding:9px 12px;color:#555;text-align:center;">'+escapeHtml(e.isbn)+'</td>' +
-      '<td style="padding:9px 12px;color:#555;text-align:center;">'+(escapeHtml(e.assignedAgentName)||'<span style="color:#999;">Unassigned</span>')+'</td>' +
+      '<td style="padding:9px 12px;color:#555;text-align:center;">'+(escapeHtml(e.assignedAgentName)||'<span style="color:#999;">Own Lead</span>')+'</td>' +
       '<td style="padding:9px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;color:'+sc+';background:'+sb+';">'+(getStatusLabel(e.status))+'</span></td></tr>'; 
   }); 
   tb.innerHTML = h; 

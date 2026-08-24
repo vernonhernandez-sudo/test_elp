@@ -1035,7 +1035,7 @@ function getEntries(sessionId) {
       isbn: ed[i][5] || '',
       address: ed[i][6] || '',
       assignedAgentId: ed[i][7],
-      assignedAgentName: am[ed[i][7]] || 'Unassigned',
+      assignedAgentName: am[ed[i][7]] || 'Own Lead',
       status: ed[i][8] || '',
       createdAt: ed[i][9] || '',
       minedById: ed[i][12] || ''
