@@ -1685,24 +1685,57 @@ document.addEventListener('DOMContentLoaded', function() {
 function openTransferModal() {
 
   if (!selectedEntryData) {
-    showToast('Please select a lead first.', 'error');
+
+    showToast(
+      'Please select a lead first.',
+      'error'
+    );
+
     return;
   }
 
-  // Reset fields
+  /*
+   * Sold leads cannot be transferred.
+   */
+  if (selectedEntryData.status === 'Sold') {
+
+    showToast(
+      'Sold leads cannot be transferred.',
+      'error'
+    );
+
+    return;
+  }
+
+  /*
+   * Reset form
+   */
   document.getElementById('transferTarget').value = '';
+
   document.getElementById('transferReason').value = '';
 
-  document.getElementById('transferError').style.display = 'none';
+  document.getElementById('transferError').style.display =
+    'none';
 
-  // Display current lead
+  /*
+   * Display current lead
+   */
   document.getElementById('transferLeadInfo').textContent =
-    '#' + selectedEntryData.id +
+    '#' +
+    selectedEntryData.id +
     ' - ' +
     (selectedEntryData.authorName || 'Unnamed Lead');
 
-  // Open modal
-  document.getElementById('transferLeadModal').style.display = 'flex';
+  /*
+   * Open modal first.
+   */
+  document.getElementById('transferLeadModal').style.display =
+    'flex';
+
+  /*
+   * Load available Admins and Sales Partners.
+   */
+  loadTransferTargets();
 }
 
 
@@ -1710,5 +1743,77 @@ function closeTransferModal() {
 
   document.getElementById('transferLeadModal').style.display = 'none';
 
+}
+
+function loadTransferTargets() {
+
+  var select =
+    document.getElementById('transferTarget');
+
+  if (!select) return;
+
+  select.innerHTML =
+    '<option value="">Loading...</option>';
+
+  google.script.run
+
+    .withSuccessHandler(function(r) {
+
+      select.innerHTML =
+        '<option value="">Select Admin or Sales Partner</option>';
+
+      if (!r || !r.success) {
+
+        select.innerHTML =
+          '<option value="">Unable to load targets</option>';
+
+        return;
+      }
+
+      if (!r.targets || r.targets.length === 0) {
+
+        select.innerHTML =
+          '<option value="">No available users</option>';
+
+        return;
+      }
+
+      r.targets.forEach(function(target) {
+
+        var option =
+          document.createElement('option');
+
+        option.value = target.id;
+
+        option.textContent =
+          target.name +
+          ' (' +
+          target.role +
+          ')';
+
+        select.appendChild(option);
+
+      });
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      console.error(
+        'loadTransferTargets failed:',
+        error
+      );
+
+      select.innerHTML =
+        '<option value="">Unable to load targets</option>';
+
+      handleServerError(
+        error,
+        'getTransferTargets'
+      );
+
+    })
+
+    .getTransferTargets(SESSION_ID);
 }
 </script>
