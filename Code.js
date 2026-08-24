@@ -598,6 +598,142 @@ function getEntryById(entryId) {
       return maxId + 1;
     }
 
+// ========== DUPLICATE LEAD CHECK ==========
+
+function normalizeLeadName(value) {
+  if (!value) return '';
+
+  return value
+    .toString()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function normalizeLeadPhone(value) {
+  if (!value) return '';
+
+  return value
+    .toString()
+    .replace(/\D/g, '');
+}
+
+function normalizeLeadEmail(value) {
+  if (!value) return '';
+
+  return value
+    .toString()
+    .trim()
+    .toLowerCase();
+}
+
+function isDuplicateLead(existingData, entryData, excludeEntryId) {
+
+  var newName =
+    normalizeLeadName(entryData.authorName);
+
+  var newPhones =
+    entryData.phones
+      ? entryData.phones
+          .toString()
+          .split(',')
+          .map(function(phone) {
+            return normalizeLeadPhone(phone);
+          })
+          .filter(function(phone) {
+            return phone !== '';
+          })
+      : [];
+
+  var newEmail =
+    normalizeLeadEmail(entryData.email);
+
+  // Start after header row
+  for (var i = 1; i < existingData.length; i++) {
+
+    var row = existingData[i];
+
+    // ==========================================
+    // IGNORE THE ENTRY CURRENTLY BEING EDITED
+    // ==========================================
+
+    if (
+      excludeEntryId !== undefined &&
+      excludeEntryId !== null &&
+      String(row[0]).trim() === String(excludeEntryId).trim()
+    ) {
+      continue;
+    }
+
+    var existingName =
+      normalizeLeadName(row[1]);
+
+    var existingPhones =
+      row[2]
+        ? row[2]
+            .toString()
+            .split(',')
+            .map(function(phone) {
+              return normalizeLeadPhone(phone);
+            })
+            .filter(function(phone) {
+              return phone !== '';
+            })
+        : [];
+
+    var existingEmail =
+      normalizeLeadEmail(row[3]);
+
+    // ==========================================
+    // NAME MATCH
+    // ==========================================
+
+    if (
+      newName &&
+      existingName &&
+      newName === existingName
+    ) {
+      return true;
+    }
+
+    // ==========================================
+    // PHONE MATCH
+    // ==========================================
+
+    for (var p = 0; p < newPhones.length; p++) {
+
+      for (var ep = 0; ep < existingPhones.length; ep++) {
+
+        if (
+          newPhones[p] &&
+          existingPhones[ep] &&
+          newPhones[p] === existingPhones[ep]
+        ) {
+          return true;
+        }
+
+      }
+
+    }
+
+    // ==========================================
+    // EMAIL MATCH
+    // Only check email when the new entry
+    // actually contains an email.
+    // ==========================================
+
+    if (
+      newEmail &&
+      existingEmail &&
+      newEmail === existingEmail
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // ========== ENTRY MANAGEMENT (Preventing duplicate Entry IDs) ==========
 function addEntry(sessionId, entryData) {
   try {
@@ -638,8 +774,20 @@ function addEntry(sessionId, entryData) {
 
     var data = sheet.getDataRange().getValues();
 
-    // Generate a unique ID
-    var newEntryId = generateEntryId(data);
+// ==========================================
+// DUPLICATE LEAD CHECK
+// ==========================================
+
+if (isDuplicateLead(data, entryData)) {
+  return {
+    success: false,
+    code: 'DUPLICATE_LEAD',
+    message: 'The Leads You Entered Already Exist in the Database'
+  };
+}
+
+// Generate a unique ID
+var newEntryId = generateEntryId(data);
 
     /*
      * Initial status:
@@ -1378,6 +1526,19 @@ function updateEntry(sessionId, entryId, entryData) {
 
     var d = s.getDataRange().getValues();
 
+// ==========================================
+// DUPLICATE LEAD CHECK
+// Ignore the entry currently being edited.
+// ==========================================
+
+if (isDuplicateLead(d, entryData, entryId)) {
+  return {
+    success: false,
+    code: 'DUPLICATE_LEAD',
+    message: 'The Leads You Entered Already Exist in the Database'
+  };
+}
+
     for (var i = 1; i < d.length; i++) {
 
       if (d[i][0] == entryId) {
@@ -1542,6 +1703,7 @@ function getEntries(sessionId) {
 
     var entrySheet = ss.getSheetByName('Entries');
     var agentSheet = ss.getSheetByName('Agents');
+    var transferSheet = ss.getSheetByName('TransferRequests');
 
     var ed = entrySheet.getDataRange().getValues();
 
@@ -1562,7 +1724,10 @@ function getEntries(sessionId) {
 
     ed.shift();
 
-    // Build Agent ID -> Name map
+    // ==========================================
+    // BUILD AGENT ID -> NAME MAP
+    // ==========================================
+
     var ad = agentSheet.getDataRange().getValues();
     ad.shift();
 
@@ -1572,11 +1737,45 @@ function getEntries(sessionId) {
       am[ad[k][0]] = ad[k][3];
     }
 
+    // ==========================================
+    // BUILD PENDING TRANSFER MAP
+    // ==========================================
+
+    var pendingTransfers = {};
+
+    if (transferSheet) {
+
+      var td = transferSheet.getDataRange().getValues();
+
+      if (td.length > 1) {
+
+        td.shift();
+
+        for (var t = 0; t < td.length; t++) {
+
+          var transferEntryId = td[t][1]; // Column B = EntryID
+          var transferStatus = td[t][9];  // Column J = Status
+
+          if (
+            transferEntryId !== '' &&
+            transferStatus &&
+            transferStatus.toString().trim() === 'Pending'
+          ) {
+
+            pendingTransfers[String(transferEntryId)] = true;
+          }
+        }
+      }
+    }
+
+    // ==========================================
+    // BUILD ENTRIES
+    // ==========================================
+
     var entries = [];
 
     for (var i = 0; i < ed.length; i++) {
 
-      //This line of codes checked both assigned leads and mined by
       var assignedAgentId = ed[i][7];
       var minedById = ed[i][12];
 
@@ -1588,20 +1787,86 @@ function getEntries(sessionId) {
         continue;
       }
 
+      // ========================================
+      // ORIGINAL STATUS
+      // ========================================
+
+      var originalStatus =
+        ed[i][8]
+          ? ed[i][8].toString().trim()
+          : '';
+
+      // ========================================
+      // CHECK PENDING TRANSFER
+      // ========================================
+
+      var isTransferPending =
+        pendingTransfers[String(ed[i][0])] === true;
+
+      /*
+       * IMPORTANT:
+       *
+       * We do NOT change the Entries sheet.
+       *
+       * We only return "Pending" to the frontend
+       * while a transfer request is awaiting approval.
+       */
+
+      var displayStatus =
+        isTransferPending
+          ? 'Pending'
+          : originalStatus;
+
       entries.push({
-      id: ed[i][0],
-      authorName: ed[i][1] || '',
-      phones: ed[i][2] || '',
-      email: ed[i][3] || '',
-      book: ed[i][4] || '',
-      isbn: ed[i][5] || '',
-      address: ed[i][6] || '',
-      assignedAgentId: ed[i][7],
-      assignedAgentName: am[ed[i][7]] || 'Own Lead',
-      status: ed[i][8] || '',
-      createdAt: ed[i][9] || '',
-      minedById: ed[i][12] || ''
-    });
+
+        id: ed[i][0],
+
+        authorName: ed[i][1] || '',
+
+        phones: ed[i][2] || '',
+
+        email: ed[i][3] || '',
+
+        book: ed[i][4] || '',
+
+        isbn: ed[i][5] || '',
+
+        address: ed[i][6] || '',
+
+        assignedAgentId: ed[i][7],
+
+        assignedAgentName:
+          am[ed[i][7]] || 'Own Lead',
+
+        /*
+         * Status shown to frontend.
+         *
+         * Pending temporarily overrides the
+         * original status while transfer is pending.
+         */
+
+        status: displayStatus,
+
+        /*
+         * Keep the real status available.
+         *
+         * This is useful later when Admin cancels
+         * or approves the transfer.
+         */
+
+        originalStatus: originalStatus,
+
+        /*
+         * Frontend can use this to lock the entry.
+         */
+
+        transferPending: isTransferPending,
+
+        createdAt: ed[i][9] || '',
+
+        minedById: ed[i][12] || ''
+
+      });
 
     }
 
@@ -1640,6 +1905,13 @@ function getEntries(sessionId) {
     };
 
   } catch (e) {
+
+    console.error(
+      'getEntries error: ' +
+      e.message +
+      ' | Stack: ' +
+      e.stack
+    );
 
     return {
       success: false,
