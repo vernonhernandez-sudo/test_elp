@@ -309,8 +309,7 @@ function updateClock() {
 
 function populateUser() {
   if (!currentUser) return;
-  var p = currentUser.name.split(' ').filter(Boolean), 
-      ini = p.length > 1 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : (p[0]||'').substring(0,2).toUpperCase();
+  var p = currentUser.name.split(' ').filter(Boolean), ini = p.length > 1 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : (p[0]||'').substring(0,2).toUpperCase();
   document.getElementById('avatar').textContent = ini; 
   document.getElementById('userName').textContent = currentUser.name; 
   document.getElementById('userEmail').textContent = currentUser.email || '';
@@ -320,142 +319,53 @@ function handleLogin(e) {
 
   e.preventDefault();
 
-  var email =
-    document.getElementById('email').value.trim();
+  var email = document.getElementById('email').value.trim();
+  var password = document.getElementById('password').value;
+  var button = document.getElementById('loginButton');
+  var error = document.getElementById('loginError'); error.style.display = 'none';
+  var emailPattern = /^[A-Z0-9._%+-]+@explorabooks\.com$/i;
 
-  var password =
-    document.getElementById('password').value;
-
-  var button =
-    document.getElementById('loginButton');
-
-  var error =
-    document.getElementById('loginError');
-
-  error.style.display = 'none';
-
-  /*
-   * =====================================================
-   * EMAIL VALIDATION
-   *
-   * Only @explorabooks.com is allowed.
-   * =====================================================
-   */
-
-  var emailPattern =
-    /^[A-Z0-9._%+-]+@explorabooks\.com$/i;
-
-  if (!email) {
-
-    error.textContent =
-      'Please enter your email address.';
-
-    error.style.display =
-      'block';
-
-    return;
-  }
-
-  if (!emailPattern.test(email)) {
-
-    error.textContent =
-      'Please use your @explorabooks.com email address.';
-
-    error.style.display =
-      'block';
-
-    return;
-  }
-
-  /*
-   * =====================================================
-   * PASSWORD VALIDATION
-   * =====================================================
-   */
-
-  if (!password) {
-
-    error.textContent =
-      'Please enter your password.';
-
-    error.style.display =
-      'block';
-
-    return;
-  }
-
-  /*
-   * Disable button while logging in.
-   */
-
+  if (!email) { error.textContent = 'Please enter your email address.'; error.style.display = 'block'; return; }
+  if (!emailPattern.test(email)) { error.textContent = 'Please use your @explorabooks.com email address.'; error.style.display = 'block'; return; }
+  if (!password) { error.textContent = 'Please enter your password.'; error.style.display = 'block'; return; }
+  
   button.disabled = true;
 
   button.textContent =
     'Signing in...';
 
-  /*
-   * =====================================================
-   * SERVER LOGIN
-   * =====================================================
-   */
-
-  google.script.run
-
-    .withSuccessHandler(function(result) {
-
-      button.disabled = false;
-
-      button.textContent =
-        'Sign In';
+  google.script.run .withSuccessHandler(function(result) { button.disabled = false; button.textContent = 'Sign In';
 
       if (result.success) {
-
         SESSION_ID =
           result.sessionId;
-
         currentUser =
           result.user;
-
         sessionStorage.setItem(
           'crm_session',
           SESSION_ID
         );
-
         populateUser();
-
-        /*
-         * For now, show Agent dashboard.
-         *
-         * We will replace this with role-based routing
-         * after the other dashboard files are ready.
-         */
-
         routeUserByRole();
 
       } else {
 
         error.textContent =
           result.message;
-
         error.style.display =
           'block';
       }
-
     })
 
     .withFailureHandler(function(error) {
 
       button.disabled = false;
-
       button.textContent =
         'Sign In';
-
       error.textContent =
         'Unable to connect to the server. Please try again.';
-
       error.style.display =
         'block';
-
     })
 
     .loginUser(
@@ -1184,534 +1094,114 @@ function saveEntryEdits() {
 
   var entryId = selectedEntryId;
 
-  google.script.run
-    .withSuccessHandler(function(r) {
+  google.script.run .withSuccessHandler(function(r) {
 
       if (r && r.success) {
 
         showToast('Updated!', 'success');
         setViewMode();
-
-        // Reload entries first.
-        // selectEntry() will run after allEntries has fresh data.
-        loadEntries(function() {
-          selectEntry(entryId);
-        });
-
+        loadEntries(function() { selectEntry(entryId); });
       } else {
-
-        showToast(
-          (r && r.message) || 'Unable to update the entry.',
-          'error'
-        );
-      }
-
-    })
-    .withFailureHandler(function(error) {
-
-      console.error('saveEntryEdits failed:', error);
-
-      showToast(
-        'Unable to update the entry. Please try again.',
-        'error'
-      );
-
-    })
+        showToast( (r && r.message) || 'Unable to update the entry.', 'error' ); } })
+    .withFailureHandler(function(error) { console.error('saveEntryEdits failed:', error);
+      showToast( 'Unable to update the entry. Please try again.', 'error' ); })
     .updateEntry(SESSION_ID, entryId, {
       authorName: document.getElementById('detailAuthorNameEdit').value.trim(),
       phones: document.getElementById('detailPhonesEdit').value.trim(),
       email: document.getElementById('detailEmailEdit').value.trim(),
       book: document.getElementById('detailBookEdit').value.trim(),
       isbn: document.getElementById('detailISBNEdit').value.trim(),
-      address: document.getElementById('detailAddressEdit').value.trim()
-    });
+      address: document.getElementById('detailAddressEdit').value.trim() });
 }
 
 function deleteCurrentEntry() { 
   showConfirm('Delete', 'Delete this entry?', function() { 
-    google.script.run
-
-  .withSuccessHandler(function(r) {
-
-    if (r && r.success) {
-
-      showToast('Deleted.', 'success');
-
+    google.script.run .withSuccessHandler(function(r) {
+    if (r && r.success) { showToast('Deleted.', 'success');
       loadEntries();
-
       document.getElementById('detailEmpty').style.display = 'block';
       document.getElementById('detailContent').style.display = 'none';
-
     } else {
-
-      showToast(
-        (r && r.message) || 'Unable to delete entry.',
-        'error'
-      );
-
-    }
-
-  })
-
-  .withFailureHandler(function(error) {
-
-    handleServerError(error, 'deleteEntry');
-
-  })
-
-  .deleteEntry(
-    SESSION_ID,
-    selectedEntryId
-  ); 
-  }, '#d32f2f'); 
+      showToast( (r && r.message) || 'Unable to delete entry.', 'error' ); } })
+  .withFailureHandler(function(error) { handleServerError(error, 'deleteEntry'); })
+  .deleteEntry( SESSION_ID, selectedEntryId ); }, '#d32f2f'); 
 }
 
 function changeEntryStatus() { 
   var newStatus = document.getElementById('detailStatusSelect').value;
-
-  google.script.run
-    .withSuccessHandler(function(r) { 
-
+  google.script.run .withSuccessHandler(function(r) { 
       if (r && r.success) { 
         updateStatusBadge(newStatus); 
         showToast('Status updated!', 'success');
-
-        // Reload the entries so the summary cards update
         loadEntries();
-
       } else {
-        showToast(
-          (r && r.message) ? r.message : 'Failed to update status.',
-          'error'
-        );
-      }
-
-    })
+        showToast( (r && r.message) ? r.message : 'Failed to update status.', 'error' ); } })
     .withFailureHandler(function(error) {
-
       console.error('changeEntryStatus error:', error);
-
-      showToast(
-        'Server error while updating status.',
-        'error'
-      );
-
-    })
-    .updateEntryStatus(
-      SESSION_ID, 
-      selectedEntryId, 
-      newStatus
-    ); 
-}
+      showToast( 'Server error while updating status.', 'error' ); })
+    .updateEntryStatus( SESSION_ID, selectedEntryId, newStatus ); }
 
 function getStatusLabel(status) {
-
   switch (status) {
-
-    case 'Pipe':
-      return 'Pipe';
-
-    case 'Exclusive':
-      return 'Exclusive';
-
-    case 'VM':
-      return 'VM - Voicemail';
-
-    case 'DNC':
-      return 'DNC - Do Not Call';
-
-    case 'Sold':
-      return 'Sold';
-
-    case 'Pending':
-      return 'Pending';
-
+    case 'Pipe': return 'Pipe';
+    case 'Exclusive': return 'Exclusive';
+    case 'VM': return 'VM - Voicemail';
+    case 'DNC': return 'DNC - Do Not Call';
+    case 'Sold': return 'Sold';
+    case 'Pending': return 'Pending';
     case '':
     case null:
-    case undefined:
-      return 'None';
-
-    default:
-      return status;
-  }
-}
+    case undefined: return 'None';
+    default: return status; } }
 
 function updateStatusBadge(status) {
-
   var b = document.getElementById('detailStatus');
-
-  if (!status || status === '') {
-
-    b.style.background = '#f5f5f5';
-    b.style.color = '#999';
-
-  }
-  else if (status === 'Pending') {
-
-    b.style.background = '#ecf0f1';
-    b.style.color = '#2c3e50';
-
-  }
-  else if (status === 'Sold') {
-
-    b.style.background = '#e8f5e9';
-    b.style.color = '#2e7d32';
-
-  }
-  else if (status === 'DNC') {
-
-    b.style.background = '#ffebee';
-    b.style.color = '#c62828';
-
-  }
-  else if (status === 'VM') {
-
-    b.style.background = '#fce4ec';
-    b.style.color = '#c2185b';
-
-  }
-  else {
-
-    b.style.background = '#fff3e0';
-    b.style.color = '#e67e22';
-
-  }
-
-  b.textContent = getStatusLabel(status);
-}
+  if (!status || status === '') { b.style.background = '#f5f5f5'; b.style.color = '#999'; }
+  else if (status === 'Pending') { b.style.background = '#ecf0f1'; b.style.color = '#2c3e50'; }
+  else if (status === 'Sold') { b.style.background = '#e8f5e9'; b.style.color = '#2e7d32'; }
+  else if (status === 'DNC') { b.style.background = '#ffebee'; b.style.color = '#c62828'; }
+  else if (status === 'VM') { b.style.background = '#fce4ec'; b.style.color = '#c2185b'; }
+  else { b.style.background = '#fff3e0'; b.style.color = '#e67e22'; } b.textContent = getStatusLabel(status); }
 
 // ========== STATUS DROPDOWN PERMISSIONS ==========
-
 function updateStatusDropdownPermissions(entry) {
-
-  var select =
-    document.getElementById('detailStatusSelect');
-
+  var select = document.getElementById('detailStatusSelect');
   if (!select || !entry) return;
-
-  /*
-   * ==========================================
-   * RESET DROPDOWN
-   * ==========================================
-   */
-
   select.disabled = false;
-
-  for (var i = 0; i < select.options.length; i++) {
-    select.options[i].disabled = false;
-  }
-
-  /*
-   * ==========================================
-   * TRANSFER PENDING = LOCKED
-   * ==========================================
-   */
-
-  if (entry.transferPending === true) {
-
-    select.disabled = true;
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * NO LOGGED-IN USER
-   * ==========================================
-   */
-
+  for (var i = 0; i < select.options.length; i++) { select.options[i].disabled = false; }
+  if (entry.transferPending === true) { select.disabled = true; return; }
   if (!currentUser) return;
-
-  /*
-   * ==========================================
-   * SOLD = FINAL STATUS
-   *
-   * Once Sold, the entire dropdown is locked.
-   * ==========================================
-   */
-
-  if (
-    String(entry.status || '').trim() === 'Sold'
-  ) {
-
-    select.disabled = true;
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * LEAD INFORMATION
-   * ==========================================
-   */
-
-  var minedById =
-    entry.minedById
-      ? String(entry.minedById).trim()
-      : '';
-
-  var currentUserId =
-    currentUser.id
-      ? String(currentUser.id).trim()
-      : '';
-
-  var isOwnLead =
-    minedById !== '' &&
-    currentUserId !== '' &&
-    minedById === currentUserId;
-
-  var currentStatus =
-    entry.status
-      ? String(entry.status).trim()
-      : '';
-
-  /*
-   * ==========================================
-   * FIND STATUS OPTIONS
-   * ==========================================
-   */
-
-  var noStatusOption =
-    select.querySelector(
-      'option[value=""]'
-    );
-
-  var exclusiveOption =
-    select.querySelector(
-      'option[value="Exclusive"]'
-    );
-
-  /*
-   * ==========================================
-   * SUPER ADMIN
-   *
-   * Super Admin has full control.
-   *
-   * Exception:
-   * Sold is already handled above and is
-   * permanently locked.
-   * ==========================================
-   */
-
-  if (
-    currentUser.role === 'Super Admin' ||
-    currentUser.role === 'Super Admin'
-  ) {
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * ADMIN
-   *
-   * Admin can manage statuses, BUT:
-   *
-   * If Admin personally mined this lead,
-   * the lead is an Exclusive lead and
-   * No Status must not be available.
-   * ==========================================
-   */
-
-  if (currentUser.role === 'Admin') {
-
-    if (isOwnLead) {
-
-      /*
-       * Personally mined Admin lead.
-       *
-       * It starts as Exclusive.
-       * No Status must never be selectable.
-       */
-
-      if (noStatusOption) {
-        noStatusOption.disabled = true;
-      }
-
-    }
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * SALES PARTNER
-   * ==========================================
-   */
-
+  if ( String(entry.status || '').trim() === 'Sold' ) { select.disabled = true; return; }
+  var minedById = entry.minedById ? String(entry.minedById).trim() : '';
+  var currentUserId = currentUser.id ? String(currentUser.id).trim() : '';
+  var isOwnLead = minedById !== '' && currentUserId !== '' && minedById === currentUserId;
+  var currentStatus = entry.status ? String(entry.status).trim() : '';
+  var noStatusOption = select.querySelector( 'option[value=""]' );
+  var exclusiveOption = select.querySelector( 'option[value="Exclusive"]' );
+  if ( currentUser.role === 'Super Admin' || currentUser.role === 'Super Admin' ) { return; }
+  if (currentUser.role === 'Admin') { if (isOwnLead) { if (noStatusOption) { noStatusOption.disabled = true; } } return; }
   if (currentUser.role === 'Sales Partner') {
-
-    /*
-     * ========================================
-     * SALES PARTNER'S OWN LEAD
-     * ========================================
-     *
-     * Their personally mined lead starts as:
-     *
-     * Exclusive
-     *
-     * Therefore:
-     *
-     * No Status = DISABLED
-     * Exclusive = current/initial status
-     *
-     * Other statuses remain available.
-     */
-
-    if (isOwnLead) {
-
-      if (noStatusOption) {
-        noStatusOption.disabled = true;
-      }
-
-      return;
-    }
-
-    /*
-     * ========================================
-     * ANOTHER PERSON'S LEAD
-     * ========================================
-     *
-     * Lead Gen Specialist leads:
-     *
-     * No Status = only available while
-     * the lead is still unprocessed.
-     *
-     * Once another status is selected,
-     * No Status becomes unavailable.
-     *
-     * Exclusive is not available.
-     */
-
-    if (noStatusOption) {
-
-      /*
-       * If it already has a status,
-       * it cannot return to No Status.
-       */
-
-      if (currentStatus !== '') {
-        noStatusOption.disabled = true;
-      }
-    }
-
-    /*
-     * Sales Partner cannot manually make
-     * another person's lead Exclusive.
-     */
-
-    if (exclusiveOption) {
-      exclusiveOption.disabled = true;
-    }
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * OTHER ROLES
-   * ==========================================
-   *
-   * No additional restrictions.
-   */
-
-  return;
-}
+    if (isOwnLead) { if (noStatusOption) { noStatusOption.disabled = true; } return; }
+    if (noStatusOption) { if (currentStatus !== '') { noStatusOption.disabled = true; } }
+    if (exclusiveOption) { exclusiveOption.disabled = true; } return; } return; }
 
 // ========== TRANSFER PENDING PERMISSIONS ==========
-
 function updateTransferPendingPermissions(entry) {
-
   if (!entry) return;
-
-  var transferBtn =
-    document.getElementById('transferBtn');
-
-  var editBtn =
-    document.getElementById('editBtn');
-
-  var saveEditBtn =
-    document.getElementById('saveEditBtn');
-
-  var cancelEditBtn =
-    document.getElementById('cancelEditBtn');
-
-  /*
-   * ==========================================
-   * CHECK PENDING TRANSFER
-   * ==========================================
-   */
-
-  var isPending =
-    entry.transferPending === true;
-
-  /*
-   * ==========================================
-   * PENDING = LOCK ENTRY
-   * ==========================================
-   */
-
+  var transferBtn = document.getElementById('transferBtn');
+  var editBtn = document.getElementById('editBtn');
+  var saveEditBtn = document.getElementById('saveEditBtn');
+  var cancelEditBtn = document.getElementById('cancelEditBtn');
+  var isPending = entry.transferPending === true;
   if (isPending) {
-
-    // Transfer
-    if (transferBtn) {
-      transferBtn.disabled = true;
-      transferBtn.style.opacity = '0.5';
-      transferBtn.style.cursor = 'not-allowed';
-    }
-
-    // Edit
-    if (editBtn) {
-      editBtn.disabled = true;
-      editBtn.style.opacity = '0.5';
-      editBtn.style.cursor = 'not-allowed';
-    }
-
-    // Status
-    var statusSelect =
-      document.getElementById('detailStatusSelect');
-
-    if (statusSelect) {
-      statusSelect.disabled = true;
-    }
-
-    /*
-     * If somehow currently editing,
-     * return to view mode.
-     */
-
-    if (
-      typeof isEditMode !== 'undefined' &&
-      isEditMode === true
-    ) {
-
-      if (typeof setViewMode === 'function') {
-        setViewMode();
-      }
-    }
-
-    return;
-  }
-
-  /*
-   * ==========================================
-   * NOT PENDING = RESTORE BUTTONS
-   * ==========================================
-   */
-
-  if (transferBtn) {
-    transferBtn.disabled = false;
-    transferBtn.style.opacity = '1';
-    transferBtn.style.cursor = 'pointer';
-  }
-
-  if (editBtn) {
-    editBtn.disabled = false;
-    editBtn.style.opacity = '1';
-    editBtn.style.cursor = 'pointer';
-  }
-
-}
+    if (transferBtn) { transferBtn.disabled = true; transferBtn.style.opacity = '0.5'; transferBtn.style.cursor = 'not-allowed'; }
+    if (editBtn) { editBtn.disabled = true; editBtn.style.opacity = '0.5'; editBtn.style.cursor = 'not-allowed'; }
+    var statusSelect = document.getElementById('detailStatusSelect');
+    if (statusSelect) { statusSelect.disabled = true; }
+    if ( typeof isEditMode !== 'undefined' && isEditMode === true ) {
+      if (typeof setViewMode === 'function') { setViewMode(); } } return; }
+  if (transferBtn) { transferBtn.disabled = false; transferBtn.style.opacity = '1'; transferBtn.style.cursor = 'pointer'; }
+  if (editBtn) { editBtn.disabled = false; editBtn.style.opacity = '1'; editBtn.style.cursor = 'pointer'; } }
 
 // ========== REMARKS & ACTIVITY ==========
 function toggleActivityView() { 
@@ -1720,215 +1210,58 @@ function toggleActivityView() {
 }
 
 function loadRemarksOnly() {
-
   if (!selectedEntryId) return;
-
-  if (!SESSION_ID) {
-    return;
-  }
-
-  google.script.run
-
-    .withSuccessHandler(function(remarks) {
-
-      var c =
-        document.getElementById('remarksList');
-
-      if (!remarks || remarks.length === 0) {
-
-        c.innerHTML =
-          '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No remarks yet.</div>';
-
-        return;
-      }
-
-      var h = '';
-
-      remarks.forEach(function(r) {
-
+  if (!SESSION_ID) { return; }
+  google.script.run .withSuccessHandler(function(remarks) {
+      var c = document.getElementById('remarksList');
+      if (!remarks || remarks.length === 0) { c.innerHTML = '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No remarks yet.</div>';
+        return; }
+      var h = ''; remarks.forEach(function(r) {
         var t = new Date(r.timestamp);
-
-        h +=
-          '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #e8dcc8;">' +
-
+        h += '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #e8dcc8;">' +
             '<div style="display:flex;justify-content:space-between;">' +
-
-              '<span style="font-size:11px;font-weight:600;color:#5d4e37;">' +
-                escapeHtml(r.userName) +
-              '</span>' +
-
-              '<span style="font-size:9px;color:#b8a88a;">' +
-                t.toLocaleString() +
-              '</span>' +
-
+              '<span style="font-size:11px;font-weight:600;color:#5d4e37;">' + escapeHtml(r.userName) + '</span>' +
+              '<span style="font-size:9px;color:#b8a88a;">' + t.toLocaleString() + '</span>' +
             '</div>' +
-
-            '<div style="font-size:12px;color:#3d3223;">' +
-              escapeHtml(r.remark) +
-            '</div>' +
-
-          '</div>';
-
-      });
-
-      c.innerHTML = h;
-
-    })
-
-    .withFailureHandler(function(error) {
-
-      handleServerError(error, 'getRemarks');
-
-    })
-
-    /*
-     * IMPORTANT:
-     *
-     * We now send BOTH:
-     * 1. SESSION_ID
-     * 2. selectedEntryId
-     */
-
-    .getRemarks(
-      SESSION_ID,
-      selectedEntryId
-    );
+            '<div style="font-size:12px;color:#3d3223;">' + escapeHtml(r.remark) + '</div>' +
+          '</div>'; });
+      c.innerHTML = h; })
+    .withFailureHandler(function(error) { handleServerError(error, 'getRemarks'); })
+    .getRemarks( SESSION_ID, selectedEntryId );
 }
 
 function loadEntryActivity() {
-
   if (!selectedEntryId) return;
-
-  if (!SESSION_ID) {
-    return;
-  }
-
-  google.script.run
-
-    .withSuccessHandler(function(items) {
-
-      var c =
-        document.getElementById('remarksList');
-
-      if (!items || items.length === 0) {
-
-        c.innerHTML =
-          '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No activity yet.</div>';
-
-        return;
-      }
-
-      var h = '';
-
-      items.forEach(function(item) {
-
+  if (!SESSION_ID) { return; }
+  google.script.run .withSuccessHandler(function(items) {
+      var c = document.getElementById('remarksList');
+      if (!items || items.length === 0) { c.innerHTML = '<div style="color:#b8a88a;font-size:12px;text-align:center;padding:20px;">No activity yet.</div>';
+        return; }
+      var h = ''; items.forEach(function(item) {
         var t = new Date(item.timestamp);
-
-        var bg =
-          item.type === 'activity'
-            ? '#f0f4f8'
-            : 'white';
-
-        var border =
-          item.type === 'activity'
-            ? '#c8d6e5'
-            : '#e8dcc8';
-
-        h +=
-          '<div style="background:' + bg +
-          ';border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid ' +
-          border + ';">' +
-
+        var bg = item.type === 'activity' ? '#f0f4f8' : 'white';
+        var border = item.type === 'activity' ? '#c8d6e5' : '#e8dcc8';
+        h += '<div style="background:' + bg + ';border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid ' + border + ';">' +
             '<div style="display:flex;justify-content:space-between;">' +
-
-              '<span style="font-size:11px;font-weight:600;color:#5d4e37;">' +
-                escapeHtml(item.userName) +
-              '</span>' +
-
-              '<span style="font-size:9px;color:#b8a88a;">' +
-                t.toLocaleString() +
-              '</span>' +
-
+              '<span style="font-size:11px;font-weight:600;color:#5d4e37;">' + escapeHtml(item.userName) + '</span>' +
+              '<span style="font-size:9px;color:#b8a88a;">' + t.toLocaleString() + '</span>' +
             '</div>' +
-
-            '<div style="font-size:12px;color:#3d3223;">' +
-              escapeHtml(item.content) +
-            '</div>' +
-
-          '</div>';
-
-      });
-
-      c.innerHTML = h;
-
-    })
-
-    .withFailureHandler(function(error) {
-
-      handleServerError(
-        error,
-        'getEntryActivity'
-      );
-
-    })
-
-    /*
-     * IMPORTANT:
-     *
-     * Send:
-     * 1. SESSION_ID
-     * 2. selectedEntryId
-     */
-
-    .getEntryActivity(
-      SESSION_ID,
-      selectedEntryId
-    );
+            '<div style="font-size:12px;color:#3d3223;">' + escapeHtml(item.content) + '</div>' +
+          '</div>'; }); c.innerHTML = h; })
+    .withFailureHandler(function(error) { handleServerError( error, 'getEntryActivity' ); })
+    .getEntryActivity( SESSION_ID, selectedEntryId );
 }
 
 function addRemark() {
-
-  var txt =
-    document.getElementById('remarkInput').value.trim();
-
+  var txt = document.getElementById('remarkInput').value.trim();
   if (!txt) return;
-
-  google.script.run
-
-    .withSuccessHandler(function(r) {
-
-      if (r && r.success) {
-
-        document.getElementById('remarkInput').value = '';
-
-        if (showingAllActivity) {
-          loadEntryActivity();
-        } else {
-          loadRemarksOnly();
-        }
-
+  google.script.run .withSuccessHandler(function(r) {
+      if (r && r.success) { document.getElementById('remarkInput').value = '';
+        if (showingAllActivity) { loadEntryActivity(); } else { loadRemarksOnly(); }
       } else {
-
-        showToast(
-          (r && r.message) || 'Unable to add remark.',
-          'error'
-        );
-
-      }
-
-    })
-
-    .withFailureHandler(function(error) {
-
-      handleServerError(error, 'addRemark');
-
-    })
-
-    .addRemark(
-      SESSION_ID,
-      selectedEntryId,
-      txt
-    );
+        showToast( (r && r.message) || 'Unable to add remark.', 'error' ); } })
+    .withFailureHandler(function(error) { handleServerError(error, 'addRemark'); })
+    .addRemark( SESSION_ID, selectedEntryId, txt );
 }
 
 function escapeHtml(t) { if (!t) return ''; var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
@@ -1942,289 +1275,71 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('confirmBtn').addEventListener('click', function() { closeConfirm(true); });
   document.getElementById('confirmOverlay').addEventListener('click', function(e) { if (e.target === document.getElementById('confirmOverlay')) closeConfirm(false); });
-  //document.getElementById('addEntryModal').addEventListener('click', function(e) { if (e.target === document.getElementById('addEntryModal')) closeEntryModal(); });
   ['entryAuthorName','entryBook','entryISBN'].forEach(function(id) { 
-    var el = document.getElementById(id); if (el) el.addEventListener('input', updateEntrySubmitButton); 
-  });
+    var el = document.getElementById(id); if (el) el.addEventListener('input', updateEntrySubmitButton); });
 });
 
 // ========== TRANSFER MODAL ==========
-
 function openTransferModal() {
-
-  if (!selectedEntryData) {
-
-    showToast(
-      'Please select a lead first.',
-      'error'
-    );
-
-    return;
-  }
-
-  /*
-   * Sold leads cannot be transferred.
-   */
-  if (selectedEntryData.status === 'Sold') {
-
-    showToast(
-      'Sold leads cannot be transferred.',
-      'error'
-    );
-
-    return;
-  }
-
-  /*
-   * Reset form
-   */
+  if (!selectedEntryData) { showToast( 'Please select a lead first.', 'error' ); return; }
+  if (selectedEntryData.status === 'Sold') { showToast( 'Sold leads cannot be transferred.', 'error' ); return; }
   document.getElementById('transferTarget').value = '';
-
   document.getElementById('transferReason').value = '';
-
-  document.getElementById('transferError').style.display =
-    'none';
-
-  /*
-   * Display current lead
-   */
-  document.getElementById('transferLeadInfo').textContent =
-  'Author - ' +
-  (selectedEntryData.authorName || 'Unnamed Lead');
-
-  /*
-   * Open modal first.
-   */
-  document.getElementById('transferLeadModal').style.display =
-    'flex';
-
-  /*
-   * Load available Admins and Sales Partners.
-   */
+  document.getElementById('transferError').style.display = 'none';
+  document.getElementById('transferLeadInfo').textContent = 'Author - ' + (selectedEntryData.authorName || 'Unnamed Lead');
+  document.getElementById('transferLeadModal').style.display = 'flex';
   loadTransferTargets();
 }
 
+function closeTransferModal() { document.getElementById('transferLeadModal').style.display = 'none'; }
 
-function closeTransferModal() {
-
-  document.getElementById('transferLeadModal').style.display = 'none';
-
-}
-
+// Load Transfer Target
 function loadTransferTargets() {
-
-  var select =
-    document.getElementById('transferTarget');
-
+  var select = document.getElementById('transferTarget');
   if (!select) return;
-
-  select.innerHTML =
-    '<option value="">Loading...</option>';
-
-  google.script.run
-
-    .withSuccessHandler(function(r) {
-
-      console.log('getTransferTargets response:', r);
-
-      select.innerHTML =
-        '<option value="">Select Admin or Sales Partner</option>';
-
-      if (!r || !r.success) {
-
-        select.innerHTML =
-          '<option value="">ERROR: ' +
-          ((r && r.message) || 'Unknown error') +
-          '</option>';
-
-        return;
-      }
-
-      if (!r.targets || r.targets.length === 0) {
-
-        select.innerHTML =
-          '<option value="">No available users</option>';
-
-        return;
-      }
-
+  select.innerHTML = '<option value="">Loading...</option>';
+  google.script.run .withSuccessHandler(function(r) { console.log('getTransferTargets response:', r);
+      select.innerHTML = '<option value="">Select Admin or Sales Partner</option>';
+      if (!r || !r.success) { select.innerHTML = '<option value="">ERROR: ' + ((r && r.message) || 'Unknown error') + '</option>'; return; }
+      if (!r.targets || r.targets.length === 0) { select.innerHTML = '<option value="">No available users</option>'; return; }
       r.targets.forEach(function(target) {
-
-        var option =
-          document.createElement('option');
-
+        var option = document.createElement('option');
         option.value = target.id;
+        option.textContent = target.name + ' (' + target.role + ')';
+        select.appendChild(option); }); })
+    .withFailureHandler(function(error) { console.error( 'getTransferTargets FAILED:', error );
+      select.innerHTML = '<option value="">ERROR: ' + (error.message || error.toString()) + '</option>'; }) .getTransferTargets(SESSION_ID); }
 
-        option.textContent =
-          target.name +
-          ' (' +
-          target.role +
-          ')';
-
-        select.appendChild(option);
-
-      });
-
-    })
-
-    .withFailureHandler(function(error) {
-
-      console.error(
-        'getTransferTargets FAILED:',
-        error
-      );
-
-      select.innerHTML =
-        '<option value="">ERROR: ' +
-        (error.message || error.toString()) +
-        '</option>';
-
-    })
-
-    .getTransferTargets(SESSION_ID);
-}
-
+    // Submit Transfer Request
 function submitTransferRequest() {
-
-  if (!selectedEntryId) {
-    showToast('No lead selected.', 'error');
-    return;
-  }
-
-  var targetSelect =
-    document.getElementById('transferTarget');
-
-  var reasonInput =
-    document.getElementById('transferReason');
-
-  if (!targetSelect) {
-    showToast('Transfer target field not found.', 'error');
-    return;
-  }
-
-  var targetAgentId =
-    targetSelect.value;
-
-  var reason =
-    reasonInput
-      ? reasonInput.value.trim()
-      : '';
-
-  /*
-   * Target is required
-   */
-  if (!targetAgentId) {
-
-    showToast(
-      'Please select a transfer target.',
-      'error'
-    );
-
-    return;
-  }
-
-  /*
-   * Prevent double-clicking Submit
-   */
-  var submitBtn =
-    document.getElementById('submitTransferBtn');
-
-  if (submitBtn) {
-
-    if (submitBtn.disabled) {
-      return;
-    }
-
+  if (!selectedEntryId) { showToast('No lead selected.', 'error'); return; }
+  var targetSelect = document.getElementById('transferTarget');
+  var reasonInput = document.getElementById('transferReason');
+  if (!targetSelect) { showToast('Transfer target field not found.', 'error'); return; }
+  var targetAgentId = targetSelect.value;
+  var reason = reasonInput ? reasonInput.value.trim() : '';
+  if (!targetAgentId) { showToast( 'Please select a transfer target.', 'error' ); return; }
+  var submitBtn = document.getElementById('submitTransferBtn');
+  if (submitBtn) { if (submitBtn.disabled) { return; }
     submitBtn.disabled = true;
     submitBtn.style.opacity = '0.5';
-    submitBtn.textContent = 'Submitting...';
-  }
-
-  google.script.run
-
-    .withSuccessHandler(function(response) {
-
-      if (submitBtn) {
+    submitBtn.textContent = 'Submitting...'; }
+  google.script.run .withSuccessHandler(function(response) { if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.style.opacity = '1';
-        submitBtn.textContent = 'Submit Transfer Request';
-      }
-
+        submitBtn.textContent = 'Submit Transfer Request'; }
       if (response && response.success) {
-
-        showToast(
-          'Transfer request submitted for approval.',
-          'success'
-        );
-
-        /*
-         * Close transfer modal
-         */
-        var modal =
-          document.getElementById('transferModal');
-
-        if (modal) {
-          modal.style.display = 'none';
-        }
-
-        /*
-         * Clear fields
-         */
-        if (targetSelect) {
-          targetSelect.value = '';
-        }
-
-        if (reasonInput) {
-          reasonInput.value = '';
-        }
-
-        /*
-         * Refresh activity/remarks so the newly
-         * created transfer request is immediately visible.
-         */
+        showToast( 'Transfer request submitted for approval.', 'success' );
+        var modal = document.getElementById('transferModal');
+        if (modal) { modal.style.display = 'none'; }
+        if (targetSelect) { targetSelect.value = ''; }
+        if (reasonInput) { reasonInput.value = ''; }
         loadRemarksOnly();
-
       } else {
-
-        showToast(
-          (response && response.message) ||
-          'Unable to submit transfer request.',
-          'error'
-        );
-      }
-
-    })
-
-    .withFailureHandler(function(error) {
-
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        submitBtn.textContent = 'Submit Transfer Request';
-      }
-
-      console.error(
-        'submitTransferRequest failed:',
-        error
-      );
-
-      showToast(
-        'Unable to submit transfer request. Please try again.',
-        'error'
-      );
-
-      handleServerError(
-        error,
-        'createTransferRequest'
-      );
-
-    })
-
-    .createTransferRequest(
-      SESSION_ID,
-      selectedEntryId,
-      targetAgentId,
-      reason
-    );
-}
+        showToast( (response && response.message) || 'Unable to submit transfer request.', 'error' ); } })
+    .withFailureHandler(function(error) { if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.textContent = 'Submit Transfer Request'; }
+      console.error( 'submitTransferRequest failed:', error );
+      showToast( 'Unable to submit transfer request. Please try again.', 'error' );
+      handleServerError( error, 'createTransferRequest' ); })
+    .createTransferRequest( SESSION_ID, selectedEntryId, targetAgentId, reason ); }
 </script>
