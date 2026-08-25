@@ -65,6 +65,8 @@
     <div style="font-size:9px;opacity:0.6;">Powered by Dan Brent Uy</div>
   </div>
   <div style="font-size:11px;opacity:0.85;" id="currentDate"></div>
+  <div id="notif" tabindex="0" role="button" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications(event)" onkeydown="if(event.key === 'Enter' || event.key === ' ') toggleNotifications(event)"><div class="notificon" aria-hidden="true"><i class="ti ti-bell"></i></div><div class="notif-count">0</div><div class="notif-text" role="button" tabindex="0" aria-label="Refresh transfer requests" onclick="refreshTransferNotifications(event)" onkeydown="if(event.key === 'Enter' || event.key === ' ') refreshTransferNotifications(event)">No new notifications</div></div>
+    <div class="settings"><button type="button" class="setting-icon" onclick="toggleSettings(event)" aria-label="Settings" aria-expanded="false"><i class="ti ti-settings" aria-hidden="true"></i></button><div class="setting-card" id="settingsCard"><button type="button">Archive</button><button type="button" onclick="handleLogout()">Logout</button></div></div>
 </div>
 
 <div class="glass-panel" style="padding:12px 28px;display:flex;align-items:center;gap:16px;flex-shrink:0;margin:0 28px;">
@@ -107,9 +109,9 @@
     <div style="font-size:9px;color:#888;">Sold</div>
   </div>
 
-</div>
+<!-- </div>
   <button onclick="handleLogout()" style="background:transparent;border:1px solid #d0d0d0;color:#555;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:11px;">Logout</button>
-</div>
+</div> -->
 
 <div style="display:flex;flex:1;margin:16px 28px 28px;gap:16px;overflow:hidden;min-height:0;">
   <div class="glass-panel" style="flex:2;overflow:hidden;padding:0;display:flex;flex-direction:column;">
