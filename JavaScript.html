@@ -1167,61 +1167,90 @@ function toggleColumnFilter(field, value, event) {
 
 document.addEventListener('click', function(event) {
 
-  // Close notifications when clicking outside
+  // ==========================================
+  // CLOSE NOTIFICATIONS WHEN CLICKING OUTSIDE
+  // ==========================================
+
   if (!event.target.closest('#notif')) {
 
-    var notification = document.getElementById('notif');
+    var notification =
+      document.getElementById('notif');
 
     if (notification) {
+
       notification.classList.remove('is-open');
-      notification.setAttribute('aria-expanded', 'false');
+
+      notification.setAttribute(
+        'aria-expanded',
+        'false'
+      );
+
     }
   }
 
-  // Close settings when clicking outside
+
+  // ==========================================
+  // CLOSE SETTINGS WHEN CLICKING OUTSIDE
+  // ==========================================
+
   if (!event.target.closest('.settings')) {
 
-    var settingsCard = document.getElementById('settingsCard');
-    var settingsButton = document.querySelector('.setting-icon');
+    var settingsCard =
+      document.getElementById('settingsCard');
+
+    var settingsButton =
+      document.querySelector('.setting-icon');
 
     if (settingsCard) {
+
       settingsCard.classList.remove('is-open');
+
     }
 
     if (settingsButton) {
-      settingsButton.setAttribute('aria-expanded', 'false');
+
+      settingsButton.setAttribute(
+        'aria-expanded',
+        'false'
+      );
+
     }
   }
 
-  // Close filter dropdowns when clicking outside
+
+  // ==========================================
+  // CLOSE FILTER DROPDOWNS
+  // ==========================================
+
   if (
     !event.target.closest('.dropdown-content') &&
     !event.target.closest('.filter-btn')
   ) {
 
-    document.querySelectorAll('.dropdown-content').forEach(function(d) {
-      d.style.display = 'none';
-    });
+    document
+      .querySelectorAll('.dropdown-content')
+      .forEach(function(d) {
+
+        d.style.display = 'none';
+
+      });
 
   }
 
 });
 
 function toggleSettings(event) {
-
-  event.preventDefault();
   event.stopPropagation();
 
-  var settingsCard =
-    document.getElementById('settingsCard');
+  var settingsCard = document.getElementById('settingsCard');
+  var settingsButton = event.currentTarget;
 
-  var settingsButton =
-    event.currentTarget;
+  if (!settingsCard) {
+    console.error('settingsCard not found.');
+    return;
+  }
 
-  if (!settingsCard) return;
-
-  var isOpen =
-    settingsCard.classList.toggle('is-open');
+  var isOpen = settingsCard.classList.toggle('is-open');
 
   settingsButton.setAttribute(
     'aria-expanded',
@@ -1236,10 +1265,12 @@ function toggleNotifications(event) {
     event.stopPropagation();
   }
 
-  var notification =
-    document.getElementById('notif');
+  var notification = document.getElementById('notif');
 
-  if (!notification) return;
+  if (!notification) {
+    console.error('notif not found.');
+    return;
+  }
 
   var isOpen =
     notification.classList.toggle('is-open');
