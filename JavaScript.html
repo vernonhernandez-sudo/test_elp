@@ -1219,6 +1219,27 @@ document.addEventListener('click', function(event) {
 
 });
 
+function toggleSettings(event) {
+  event.stopPropagation();
+  var settingsCard = dashboardElement('settingsCard');
+  var settingsButton = event.currentTarget;
+  if (!settingsCard) return;
+  var isOpen = settingsCard.classList.toggle('is-open');
+  settingsButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function toggleNotifications(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  var notification = dashboardElement('notif');
+  if (!notification) return;
+  var isOpen = notification.classList.toggle('is-open');
+  notification.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  if (isOpen) loadTransferRequestNotifications();
+}
+
 function updateSummaryCards(s) { 
   document.getElementById('totalCount').textContent = s.totalAssigned || 0; 
   document.getElementById('pipeCount').textContent = s.pipeCount || 0;
