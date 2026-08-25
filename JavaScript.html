@@ -464,88 +464,26 @@ function handleLogin(e) {
     );
 }
 
-// function handleLogout() {
-
-//   if (SESSION_ID) {
-//     google.script.run.logoutUser(SESSION_ID);
-//   }
-
-//   stopSessionMonitoring();
-
-//   sessionStorage.removeItem('crm_session');
-
-//   SESSION_ID = null;
-//   currentUser = null;
-
-//   document.getElementById('agentScreen').style.display = 'none';
-//   document.getElementById('loginScreen').style.display = 'flex';
-
-//   document.getElementById('email').value = '';
-//   document.getElementById('password').value = '';
-
-//   document.getElementById('loginError').style.display = 'none';
-// }
-
 function handleLogout() {
 
-  // Logout from server
   if (SESSION_ID) {
     google.script.run.logoutUser(SESSION_ID);
   }
 
-  // Stop session monitoring
   stopSessionMonitoring();
 
-  // Clear browser session
   sessionStorage.removeItem('crm_session');
+
   SESSION_ID = null;
   currentUser = null;
 
-  // Hide all dashboard screens
-  var adminScreen = document.getElementById('adminScreen');
-  var superScreen = document.getElementById('superScreen');
-  var agentScreen = document.getElementById('agentScreen');
-  var leadgenScreen = document.getElementById('leadgenScreen');
+  document.getElementById('agentScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
 
-  if (adminScreen) {
-    adminScreen.style.display = 'none';
-  }
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
 
-  if (superScreen) {
-    superScreen.style.display = 'none';
-  }
-
-  if (agentScreen) {
-    agentScreen.style.display = 'none';
-  }
-
-  if (leadgenScreen) {
-    leadgenScreen.style.display = 'none';
-  }
-
-  // Show login screen
-  var loginScreen = document.getElementById('loginScreen');
-
-  if (loginScreen) {
-    loginScreen.style.display = 'flex';
-  }
-
-  // Clear login fields
-  var email = document.getElementById('email');
-  var password = document.getElementById('password');
-  var loginError = document.getElementById('loginError');
-
-  if (email) {
-    email.value = '';
-  }
-
-  if (password) {
-    password.value = '';
-  }
-
-  if (loginError) {
-    loginError.style.display = 'none';
-  }
+  document.getElementById('loginError').style.display = 'none';
 }
 
 function showToast(message, type) { 
@@ -1159,131 +1097,11 @@ function toggleColumnFilter(field, value, event) {
   return false; 
 }
 
-// document.addEventListener('click', function(event) { 
-//   if (!event.target.closest('.dropdown-content') && !event.target.closest('.filter-btn')) { 
-//     document.querySelectorAll('.dropdown-content').forEach(function(d){d.style.display='none';}); 
-//   } 
-// });
-
-document.addEventListener('click', function(event) {
-
-  // ==========================================
-  // CLOSE NOTIFICATIONS WHEN CLICKING OUTSIDE
-  // ==========================================
-
-  if (!event.target.closest('#notif')) {
-
-    var notification =
-      document.getElementById('notif');
-
-    if (notification) {
-
-      notification.classList.remove('is-open');
-
-      notification.setAttribute(
-        'aria-expanded',
-        'false'
-      );
-
-    }
-  }
-
-
-  // ==========================================
-  // CLOSE SETTINGS WHEN CLICKING OUTSIDE
-  // ==========================================
-
-  if (!event.target.closest('.settings')) {
-
-    var settingsCard =
-      document.getElementById('settingsCard');
-
-    var settingsButton =
-      document.querySelector('.setting-icon');
-
-    if (settingsCard) {
-
-      settingsCard.classList.remove('is-open');
-
-    }
-
-    if (settingsButton) {
-
-      settingsButton.setAttribute(
-        'aria-expanded',
-        'false'
-      );
-
-    }
-  }
-
-
-  // ==========================================
-  // CLOSE FILTER DROPDOWNS
-  // ==========================================
-
-  if (
-    !event.target.closest('.dropdown-content') &&
-    !event.target.closest('.filter-btn')
-  ) {
-
-    document
-      .querySelectorAll('.dropdown-content')
-      .forEach(function(d) {
-
-        d.style.display = 'none';
-
-      });
-
-  }
-
+document.addEventListener('click', function(event) { 
+  if (!event.target.closest('.dropdown-content') && !event.target.closest('.filter-btn')) { 
+    document.querySelectorAll('.dropdown-content').forEach(function(d){d.style.display='none';}); 
+  } 
 });
-
-function toggleSettings(event) {
-  event.stopPropagation();
-
-  var settingsCard = document.getElementById('settingsCard');
-  var settingsButton = event.currentTarget;
-
-  if (!settingsCard) {
-    console.error('settingsCard not found.');
-    return;
-  }
-
-  var isOpen = settingsCard.classList.toggle('is-open');
-
-  settingsButton.setAttribute(
-    'aria-expanded',
-    isOpen ? 'true' : 'false'
-  );
-}
-
-function toggleNotifications(event) {
-
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  var notification = document.getElementById('notif');
-
-  if (!notification) {
-    console.error('notif not found.');
-    return;
-  }
-
-  var isOpen =
-    notification.classList.toggle('is-open');
-
-  notification.setAttribute(
-    'aria-expanded',
-    isOpen ? 'true' : 'false'
-  );
-
-  if (isOpen) {
-    loadTransferRequestNotifications();
-  }
-}
 
 function updateSummaryCards(s) { 
   document.getElementById('totalCount').textContent = s.totalAssigned || 0; 

@@ -520,8 +520,12 @@ function validateSession(sessionId) {
  * Logout
  */
 function logoutUser(sessionId) {
-  if (sessionId) try { CacheService.getScriptCache().remove(sessionId); } catch (e) {}
-  return { success: true };
+
+  removeStoredSession(sessionId);
+
+  return {
+    success: true
+  };
 }
 
 // ========== ENTRY ACCESS CONTROL ==========
