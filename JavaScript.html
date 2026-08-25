@@ -1170,7 +1170,7 @@ document.addEventListener('click', function(event) {
   // Close notifications when clicking outside
   if (!event.target.closest('#notif')) {
 
-    var notification = dashboardElement('notif');
+    var notification = document.getElementById('notif');
 
     if (notification) {
       notification.classList.remove('is-open');
@@ -1181,12 +1181,8 @@ document.addEventListener('click', function(event) {
   // Close settings when clicking outside
   if (!event.target.closest('.settings')) {
 
-    var settingsCard = dashboardElement('settingsCard');
-
-    var settingsButton =
-      document.getElementById(activeDashboardId) &&
-      document.getElementById(activeDashboardId)
-        .querySelector('.setting-icon');
+    var settingsCard = document.getElementById('settingsCard');
+    var settingsButton = document.querySelector('.setting-icon');
 
     if (settingsCard) {
       settingsCard.classList.remove('is-open');
@@ -1203,41 +1199,59 @@ document.addEventListener('click', function(event) {
     !event.target.closest('.filter-btn')
   ) {
 
-    var dashboard =
-      document.getElementById(activeDashboardId);
+    document.querySelectorAll('.dropdown-content').forEach(function(d) {
+      d.style.display = 'none';
+    });
 
-    if (dashboard) {
-
-      dashboard
-        .querySelectorAll('.dropdown-content')
-        .forEach(function(d) {
-          d.style.display = 'none';
-        });
-
-    }
   }
 
 });
 
 function toggleSettings(event) {
+
+  event.preventDefault();
   event.stopPropagation();
-  var settingsCard = dashboardElement('settingsCard');
-  var settingsButton = event.currentTarget;
+
+  var settingsCard =
+    document.getElementById('settingsCard');
+
+  var settingsButton =
+    event.currentTarget;
+
   if (!settingsCard) return;
-  var isOpen = settingsCard.classList.toggle('is-open');
-  settingsButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+  var isOpen =
+    settingsCard.classList.toggle('is-open');
+
+  settingsButton.setAttribute(
+    'aria-expanded',
+    isOpen ? 'true' : 'false'
+  );
 }
 
 function toggleNotifications(event) {
+
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
-  var notification = dashboardElement('notif');
+
+  var notification =
+    document.getElementById('notif');
+
   if (!notification) return;
-  var isOpen = notification.classList.toggle('is-open');
-  notification.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-  if (isOpen) loadTransferRequestNotifications();
+
+  var isOpen =
+    notification.classList.toggle('is-open');
+
+  notification.setAttribute(
+    'aria-expanded',
+    isOpen ? 'true' : 'false'
+  );
+
+  if (isOpen) {
+    loadTransferRequestNotifications();
+  }
 }
 
 function updateSummaryCards(s) { 
