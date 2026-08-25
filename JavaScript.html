@@ -276,35 +276,15 @@ function handleSessionExpired() {
 }
 
 // ========== APPS SCRIPT ERROR HANDLER ==========
-
 function handleServerError(error, context) {
-
-  console.error(
-    'Apps Script error [' + (context || 'Unknown') + ']:',
-    error
-  );
-
+  console.error( 'Apps Script error [' + (context || 'Unknown') + ']:', error );
   var message = 'Something went wrong. Please try again.';
-
-  if (error && error.message) {
-    message = error.message;
-  }
-
-  showToast(message, 'error');
+  if (error && error.message) { message = error.message; } showToast(message, 'error');
 }
 
 function updateClock() { 
   var d = new Date(), el = document.getElementById('currentDate'); 
-
-  if (el) el.textContent = d.toLocaleString('en-US', {
-    timeZone: currentTimeZone,
-    weekday:'long',
-    year:'numeric',
-    month:'long',
-    day:'numeric',
-    hour:'2-digit',
-    minute:'2-digit'
-  }); 
+  if (el) el.textContent = d.toLocaleString('en-US', { timeZone: currentTimeZone, weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' }); 
 }
 
 function populateUser() {
@@ -316,83 +296,44 @@ function populateUser() {
 }
 
 function handleLogin(e) {
-
   e.preventDefault();
-
   var email = document.getElementById('email').value.trim();
   var password = document.getElementById('password').value;
   var button = document.getElementById('loginButton');
   var error = document.getElementById('loginError'); error.style.display = 'none';
   var emailPattern = /^[A-Z0-9._%+-]+@explorabooks\.com$/i;
-
   if (!email) { error.textContent = 'Please enter your email address.'; error.style.display = 'block'; return; }
   if (!emailPattern.test(email)) { error.textContent = 'Please use your @explorabooks.com email address.'; error.style.display = 'block'; return; }
   if (!password) { error.textContent = 'Please enter your password.'; error.style.display = 'block'; return; }
-  
   button.disabled = true;
-
-  button.textContent =
-    'Signing in...';
-
+  button.textContent = 'Signing in...';
   google.script.run .withSuccessHandler(function(result) { button.disabled = false; button.textContent = 'Sign In';
-
       if (result.success) {
-        SESSION_ID =
-          result.sessionId;
-        currentUser =
-          result.user;
-        sessionStorage.setItem(
-          'crm_session',
-          SESSION_ID
-        );
-        populateUser();
-        routeUserByRole();
-
+        SESSION_ID = result.sessionId;
+        currentUser = result.user;
+        sessionStorage.setItem( 'crm_session',
+          SESSION_ID ); populateUser(); routeUserByRole();
       } else {
-
-        error.textContent =
-          result.message;
-        error.style.display =
-          'block';
-      }
-    })
-
+        error.textContent = result.message;
+        error.style.display = 'block'; } })
     .withFailureHandler(function(error) {
-
       button.disabled = false;
-      button.textContent =
-        'Sign In';
-      error.textContent =
-        'Unable to connect to the server. Please try again.';
-      error.style.display =
-        'block';
-    })
-
-    .loginUser(
-      email,
-      password
-    );
+      button.textContent = 'Sign In';
+      error.textContent = 'Unable to connect to the server. Please try again.';
+      error.style.display = 'block'; })
+    .loginUser( email, password );
 }
 
 function handleLogout() {
-
-  if (SESSION_ID) {
-    google.script.run.logoutUser(SESSION_ID);
-  }
-
+  if (SESSION_ID) { google.script.run.logoutUser(SESSION_ID); }
   stopSessionMonitoring();
-
   sessionStorage.removeItem('crm_session');
-
   SESSION_ID = null;
   currentUser = null;
-
   document.getElementById('agentScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
-
   document.getElementById('email').value = '';
   document.getElementById('password').value = '';
-
   document.getElementById('loginError').style.display = 'none';
 }
 
@@ -417,374 +358,133 @@ function closeConfirm(confirmed) {
   document.getElementById('confirmOverlay').style.display = 'none'; 
   if (confirmed && typeof confirmCallback === 'function') { 
     var cb = confirmCallback; confirmCallback = null; 
-    cb(); 
-  } 
+    cb(); } 
 }
 
 // ========== ENTRY MODAL ==========
 function openEntryModal() {
-
   var draft = getEntryDraft();
-
-  /*
-   * ==========================================
-   * RESTORE EXISTING DRAFT
-   * ==========================================
-   */
-
   if (draft) {
-
-    document.getElementById('entryAuthorName').value =
-      draft.authorName || '';
-
-    document.getElementById('entryEmail').value =
-      draft.email || '';
-
-    document.getElementById('entryBook').value =
-      draft.book || '';
-
-    document.getElementById('entryISBN').value =
-      draft.isbn || '';
-
-    document.getElementById('entryAddress').value =
-      draft.address || '';
-
-    /*
-     * Restore phone fields.
-     */
-
-    var container =
-      document.getElementById('phoneNumbersContainer');
-
+    document.getElementById('entryAuthorName').value = draft.authorName || '';
+    document.getElementById('entryEmail').value = draft.email || '';
+    document.getElementById('entryBook').value = draft.book || '';
+    document.getElementById('entryISBN').value = draft.isbn || '';
+    document.getElementById('entryAddress').value = draft.address || '';
+    var container = document.getElementById('phoneNumbersContainer');
     container.innerHTML = '';
-
-    var phones =
-      Array.isArray(draft.phones)
-        ? draft.phones
-        : [];
-
-    /*
-     * Always create at least one phone field.
-     */
-
-    if (phones.length === 0) {
-      phones.push('');
-    }
-
+    var phones = Array.isArray(draft.phones) ? draft.phones : [];
+    if (phones.length === 0) { phones.push(''); }
     phones.forEach(function(phone) {
-
-      var d =
-        document.createElement('div');
-
-      d.style.cssText =
-        'display:flex;gap:8px;margin-bottom:8px;';
-
-      d.innerHTML =
-        '<input type="text" class="entryPhone" ' +
-        'placeholder="+1 234 567 8900" ' +
-        'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;" ' +
-        'oninput="handleUSPhoneInput(this)">' +
-
-        '<button type="button" onclick="removePhoneField(this)" ' +
-        'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;">' +
-        'Remove</button>';
-
+      var d = document.createElement('div');
+      d.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+      d.innerHTML = '<input type="text" class="entryPhone" ' + 'placeholder="+1 234 567 8900" ' + 'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;" ' + 'oninput="handleUSPhoneInput(this)">' +
+        '<button type="button" onclick="removePhoneField(this)" ' + 'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;">' + 'Remove</button>';
       container.appendChild(d);
-
-      d.querySelector('.entryPhone').value =
-        formatUSPhoneNumber(phone || '');
-    });
-
+      d.querySelector('.entryPhone').value = formatUSPhoneNumber(phone || ''); });
     updateRemoveButtons();
-
   } else {
-
-    /*
-     * ==========================================
-     * NO DRAFT = FRESH ENTRY
-     * ==========================================
-     */
-
     document.getElementById('entryAuthorName').value = '';
     document.getElementById('entryEmail').value = '';
     document.getElementById('entryBook').value = '';
     document.getElementById('entryISBN').value = '';
     document.getElementById('entryAddress').value = '';
-
-    document.getElementById('phoneNumbersContainer').innerHTML =
-
-      '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
-
-      '<input type="text" class="entryPhone" ' +
-      'placeholder="+1 234 567 8900" ' +
-      'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;" ' +
-      'oninput="handleUSPhoneInput(this)">' +
-
-      '<button type="button" onclick="removePhoneField(this)" ' +
-      'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;display:none;">' +
-
-      'Remove</button>' +
-
-      '</div>';
-  }
-
-  document.getElementById('entryError').style.display =
-    'none';
-
+    document.getElementById('phoneNumbersContainer').innerHTML = '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+      '<input type="text" class="entryPhone" ' + 'placeholder="+1 234 567 8900" ' + 'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;" ' + 'oninput="handleUSPhoneInput(this)">' +
+      '<button type="button" onclick="removePhoneField(this)" ' + 'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;display:none;">' + 'Remove</button>' + '</div>'; }
+  document.getElementById('entryError').style.display = 'none';
   updateEntrySubmitButton();
-
-  document.getElementById('addEntryModal').style.display =
-    'flex';
-
+  document.getElementById('addEntryModal').style.display = 'flex';
   document.getElementById('entryAuthorName').focus();
 }
 
 // ========== ENTRY DRAFT ==========
-
 var ENTRY_DRAFT_KEY = 'explora_entry_draft';
 
 function saveEntryDraft() {
-
   var phones = [];
-
-  document.querySelectorAll('.entryPhone').forEach(function(input) {
-    phones.push(input.value);
-  });
-
+  document.querySelectorAll('.entryPhone').forEach(function(input) { phones.push(input.value); });
   var draft = {
     authorName: document.getElementById('entryAuthorName').value,
     phones: phones,
     email: document.getElementById('entryEmail').value,
     book: document.getElementById('entryBook').value,
     isbn: document.getElementById('entryISBN').value,
-    address: document.getElementById('entryAddress').value
-  };
-
-  sessionStorage.setItem(
-    ENTRY_DRAFT_KEY,
-    JSON.stringify(draft)
-  );
+    address: document.getElementById('entryAddress').value };
+  sessionStorage.setItem( ENTRY_DRAFT_KEY, JSON.stringify(draft) );
 }
-
 
 function getEntryDraft() {
-
-  var raw = sessionStorage.getItem(
-    ENTRY_DRAFT_KEY
-  );
-
-  if (!raw) return null;
-
-  try {
-
+  var raw = sessionStorage.getItem( ENTRY_DRAFT_KEY );
+  if (!raw) return null; try {
     return JSON.parse(raw);
-
   } catch (e) {
-
-    sessionStorage.removeItem(
-      ENTRY_DRAFT_KEY
-    );
-
-    return null;
-  }
+    sessionStorage.removeItem( ENTRY_DRAFT_KEY );
+    return null; }
 }
-
 
 function clearEntryDraft() {
-
-  sessionStorage.removeItem(
-    ENTRY_DRAFT_KEY
-  );
+  sessionStorage.removeItem( ENTRY_DRAFT_KEY );
 }
 
-
 function restoreEntryDraft() {
-
   var draft = getEntryDraft();
-
   if (!draft) return false;
-
-  document.getElementById('entryAuthorName').value =
-    draft.authorName || '';
-
-  document.getElementById('entryEmail').value =
-    draft.email || '';
-
-  document.getElementById('entryBook').value =
-    draft.book || '';
-
-  document.getElementById('entryISBN').value =
-    draft.isbn || '';
-
-  document.getElementById('entryAddress').value =
-    draft.address || '';
-
-  /*
-   * Restore phone numbers
-   */
-
-  var container =
-    document.getElementById('phoneNumbersContainer');
-
+  document.getElementById('entryAuthorName').value = draft.authorName || '';
+  document.getElementById('entryEmail').value = draft.email || '';
+  document.getElementById('entryBook').value = draft.book || '';
+  document.getElementById('entryISBN').value = draft.isbn || '';
+  document.getElementById('entryAddress').value = draft.address || '';
+  var container = document.getElementById('phoneNumbersContainer');
   container.innerHTML = '';
-
-  var phones =
-    Array.isArray(draft.phones)
-      ? draft.phones
-      : [];
-
-  /*
-   * Always keep at least one phone field.
-   */
-
-  if (phones.length === 0) {
-    phones.push('');
-  }
-
+  var phones = Array.isArray(draft.phones) ? draft.phones : [];
+  if (phones.length === 0) { phones.push(''); }
   phones.forEach(function(phone) {
-
-    var d =
-      document.createElement('div');
-
-    d.style.cssText =
-      'display:flex;gap:8px;margin-bottom:8px;';
-
-    d.innerHTML =
-      '<input type="text" class="entryPhone" ' +
-      'placeholder="+1 234 567 8900" ' +
-      'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;">' +
-
-      '<button type="button" onclick="removePhoneField(this)" ' +
-      'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;">' +
-      'Remove</button>';
-
+    var d = document.createElement('div');
+    d.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+    d.innerHTML = '<input type="text" class="entryPhone" ' + 'placeholder="+1 234 567 8900" ' + 'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;">' +
+      '<button type="button" onclick="removePhoneField(this)" ' + 'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;">' + 'Remove</button>';
     container.appendChild(d);
-
-    d.querySelector('.entryPhone').value =
-      phone || '';
-  });
-
+    d.querySelector('.entryPhone').value = phone || ''; });
   updateRemoveButtons();
   updateEntrySubmitButton();
-
   return true;
 }
 
 function closeEntryModal() {
-
-  /*
-   * Save unfinished form before closing.
-   */
   saveEntryDraft();
-
-  document.getElementById('addEntryModal').style.display =
-    'none';
+  document.getElementById('addEntryModal').style.display = 'none';
 }
 
-// ========== U.S. PHONE FORMATTER ==========
-
+// ==========PHONE FORMATTER ==========
 function formatUSPhoneNumber(value) {
-
-  /*
-   * Keep digits only.
-   */
   var digits = value.replace(/\D/g, '');
-
-  /*
-   * Handle 11-digit U.S. number beginning with 1.
-   *
-   * 19186917015
-   * ↓
-   * 9186917015
-   */
-  if (
-    digits.length === 11 &&
-    digits.charAt(0) === '1'
-  ) {
-
-    digits = digits.substring(1);
-  }
-
-  /*
-   * Limit to 10 digits.
-   */
+  if ( digits.length === 11 && digits.charAt(0) === '1' ) {
+    digits = digits.substring(1); } 
   digits = digits.substring(0, 10);
-
-  /*
-   * Build formatted number.
-   */
-  if (digits.length <= 3) {
-
-    return digits;
-
+  if (digits.length <= 3) { return digits;
   } else if (digits.length <= 6) {
-
-    return '(' +
-      digits.substring(0, 3) +
-      ') ' +
-      digits.substring(3);
-
+    return '(' + digits.substring(0, 3) + ') ' + digits.substring(3);
   } else {
-
-    return '(' +
-      digits.substring(0, 3) +
-      ') ' +
-      digits.substring(3, 6) +
-      '-' +
-      digits.substring(6);
-  }
+    return '(' + digits.substring(0, 3) + ') ' + digits.substring(3, 6) + '-' + digits.substring(6); }
 }
-
 
 function handleUSPhoneInput(input) {
-
   var cursorPosition = input.selectionStart;
-
   var oldValue = input.value;
-
-  var formatted =
-    formatUSPhoneNumber(oldValue);
-
+  var formatted = formatUSPhoneNumber(oldValue);
   input.value = formatted;
-
-  /*
-   * Save draft immediately after formatting.
-   */
   saveEntryDraft();
-
-  /*
-   * Put cursor at the end.
-   *
-   * This keeps typing natural.
-   */
-  input.setSelectionRange(
-    formatted.length,
-    formatted.length
-  );
+  input.setSelectionRange( formatted.length, formatted.length );
 }
 
 function addPhoneField() {
   var c = document.getElementById('phoneNumbersContainer');
   var d = document.createElement('div');
-
-  d.style.cssText =
-    'display:flex;gap:8px;margin-bottom:8px;';
-
-  d.innerHTML =
-    '<input type="text" class="entryPhone" ' +
-    'placeholder="+1 234 567 8900" ' +
-    'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;">' +
-
-    '<button type="button" ' +
-    'onclick="removePhoneField(this)" ' +
-    'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;">' +
-    'Remove</button>';
-
+  d.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+  d.innerHTML = '<input type="text" class="entryPhone" ' + 'placeholder="+1 234 567 8900" ' + 'style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;">' +
+    '<button type="button" ' + 'onclick="removePhoneField(this)" ' + 'style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;">' + 'Remove</button>';
   c.appendChild(d);
-
   updateRemoveButtons();
-
-  // Save the newly added phone field to the draft system
   saveEntryDraft();
 }
 
@@ -822,118 +522,39 @@ function submitEntry(e) {
   var er = document.getElementById('entryError'); 
   er.style.display = 'none'; 
   if (!an || !bk || !is) { er.textContent = 'Author Name, Book, and ISBN are required.'; er.style.display = 'block'; isSubmitting = false; return; } 
-  google.script.run
-
-  .withSuccessHandler(function(r) {
-
-    isSubmitting = false;
-
-    if (r && r.success) {
-
-  /*
-   * ==========================================
-   * ENTRY SUCCESSFULLY SAVED
-   * ==========================================
-   *
-   * Remove the unfinished draft.
-   */
-
-  clearEntryDraft();
-
-  showToast(
-    'Entry saved!',
-    'success'
-  );
-
-  /*
-   * Don't use closeEntryModal() here because
-   * closeEntryModal() saves the draft.
-   */
-
-  document.getElementById('addEntryModal').style.display =
-    'none';
-
+  google.script.run .withSuccessHandler(function(r) { isSubmitting = false;
+    if (r && r.success) { clearEntryDraft();
+  showToast( 'Entry saved!', 'success' );
+  document.getElementById('addEntryModal').style.display = 'none';
   loadEntries();
-
-} else {
-
-      er.textContent =
-        (r && r.message) || 'Unable to save entry.';
-
-      er.style.display = 'block';
-
-    }
-
-  })
-
-  .withFailureHandler(function(error) {
-
-    isSubmitting = false;
-
-    er.textContent =
-      'Unable to save entry. Please try again.';
-
+    } else {
+      er.textContent = (r && r.message) || 'Unable to save entry.';
+      er.style.display = 'block'; } })
+  .withFailureHandler(function(error) { isSubmitting = false;
+    er.textContent = 'Unable to save entry. Please try again.';
     er.style.display = 'block';
-
-    handleServerError(error, 'addEntry');
-
-  })
-
-  .addEntry(SESSION_ID, {
-    authorName: an,
-    phones: ph.join(', '),
-    email: em,
-    book: bk,
-    isbn: is,
-    address: ad
-  }); 
+    handleServerError(error, 'addEntry'); })
+  .addEntry(SESSION_ID, { authorName: an, phones: ph.join(', '), email: em, book: bk, isbn: is, address: ad }); 
 }
 
 // ========== TABLE ==========
 var allEntries = []; 
 var columnFilters = {};
 
-function loadEntries(callback) {
-  if (!SESSION_ID) return;
-
-  document.getElementById('entriesTableBody').innerHTML =
-    '<tr><td colspan="5" style="padding:60px;text-align:center;color:#aaa;">Loading...</td></tr>';
-
-  google.script.run
-    .withSuccessHandler(function(r) {
-
+// Load Entries
+function loadEntries(callback) { if (!SESSION_ID) return;
+  document.getElementById('entriesTableBody').innerHTML = '<tr><td colspan="5" style="padding:60px;text-align:center;color:#aaa;">Loading...</td></tr>';
+  google.script.run .withSuccessHandler(function(r) {
       if (r && r.success) {
-
         allEntries = r.entries;
-
         buildFilterOptions();
         filterTable();
-        updateSummaryCards(r.summary);
-
-        // Run callback ONLY after allEntries
-        // has been updated with fresh server data.
-        if (typeof callback === 'function') {
-          callback();
-        }
-
+        updateSummaryCards(r.summary); 
+        if (typeof callback === 'function') { callback(); }
       } else {
-
-        showToast(
-          (r && r.message) || 'Unable to load entries.',
-          'error'
-        );
-      }
-
-    })
-    .withFailureHandler(function(error) {
-
-      console.error('loadEntries failed:', error);
-
-      showToast(
-        'Unable to load entries. Please try again.',
-        'error'
-      );
-    })
+        showToast( (r && r.message) || 'Unable to load entries.', 'error' ); } })
+    .withFailureHandler(function(error) { console.error('loadEntries failed:', error);
+      showToast( 'Unable to load entries. Please try again.', 'error' ); })
     .getEntries(SESSION_ID);
 }
 

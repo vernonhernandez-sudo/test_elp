@@ -2477,194 +2477,57 @@ function addSystemRemark(eid, un, msg) {
 
 // ========== Round-Robin DISTRIBUTION ==========
 function distributeNewEntry(entryId) {
-
   var lock = LockService.getScriptLock();
-
   try {
-
-    // Prevent two simultaneous leads from getting the same agent
     lock.waitLock(10000);
-
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var agentSheet = ss.getSheetByName('Agents');
     var entrySheet = ss.getSheetByName('Entries');
-
-    if (!agentSheet || !entrySheet) {
-      return;
-    }
-
+    if (!agentSheet || !entrySheet) { return; }
     var agentData = agentSheet.getDataRange().getValues();
-
-    if (agentData.length <= 1) {
-      return;
-    }
-
-    // Remove header row
+    if (agentData.length <= 1) { return; }
     agentData.shift();
-
-    /*
-      Agents sheet columns:
-
-      [0] = Agent ID
-      [1] = Username
-      [2] = Password
-      [3] = Name
-      [4] = Email
-      [5] = ...
-      [6] = ...
-      [7] = Role
-      [8] = Status
-    */
-
-    // Only Active Admins and Sales Partners can receive automatic leads
     var eligibleAgents = [];
-
     for (var i = 0; i < agentData.length; i++) {
-
       var agent = agentData[i];
-
       var agentId = agent[0];
       var agentName = agent[3];
       var role = agent[7] ? agent[7].toString().trim() : '';
       var status = agent[8] ? agent[8].toString().trim() : '';
-
-      if (
-        status === 'Active' &&
-        (role === 'Admin' || role === 'Sales Partner')
-      ) {
-
-        eligibleAgents.push({
-          id: agentId,
-          name: agentName,
-          role: role,
-          rowIndex: i
-        });
-
-      }
-    }
-
-    // No eligible agents available
-    if (eligibleAgents.length === 0) {
-      return;
-    }
-
-    /*
-      Store the ID of the last agent who received
-      an automatically distributed lead.
-
-      This property survives between function executions,
-      so the round-robin sequence continues where it stopped.
-    */
+      if ( status === 'Active' && (role === 'Admin' || role === 'Sales Partner') ) {
+        eligibleAgents.push({ id: agentId, name: agentName, role: role, rowIndex: i }); } }
+    if (eligibleAgents.length === 0) { return; }
     var properties = PropertiesService.getScriptProperties();
-
     var lastAgentId = properties.getProperty('LAST_DISTRIBUTED_AGENT_ID');
-
     var nextAgentIndex = 0;
-
     if (lastAgentId !== null) {
-
-      // Find the last agent in the current eligible list
       var lastIndex = -1;
-
       for (var j = 0; j < eligibleAgents.length; j++) {
-
-        if (String(eligibleAgents[j].id) === String(lastAgentId)) {
-          lastIndex = j;
-          break;
-        }
-
-      }
-
-      if (lastIndex !== -1) {
-
-        // Continue with the next person
-        nextAgentIndex = (lastIndex + 1) % eligibleAgents.length;
-
+        if (String(eligibleAgents[j].id) === String(lastAgentId)) { lastIndex = j; break; } }
+      if (lastIndex !== -1) { nextAgentIndex = (lastIndex + 1) % eligibleAgents.length;
       } else {
-
-        /*
-          The previous agent is no longer eligible
-          (possibly inactive, removed, or role changed).
-
-          Start from the first eligible agent.
-        */
-        nextAgentIndex = 0;
-      }
-    }
-
+        nextAgentIndex = 0; } }
     var selectedAgent = eligibleAgents[nextAgentIndex];
-
-    /*
-      Find the Entry and assign it to the selected agent.
-    */
     var entryData = entrySheet.getDataRange().getValues();
-
     var entryFound = false;
-
     for (var k = 1; k < entryData.length; k++) {
-
       if (String(entryData[k][0]) === String(entryId)) {
-
-        // Column 8 = Assigned Agent ID
         entrySheet.getRange(k + 1, 8).setValue(selectedAgent.id);
-
-        // Column 10 = Assignment timestamp
-        entrySheet
-          .getRange(k + 1, 10)
-          .setValue(new Date().toISOString());
-
-        entryFound = true;
-        break;
-      }
-    }
-
-    if (!entryFound) {
-      return;
-    }
-
-    /*
-      Remember this agent.
-
-      The NEXT lead will continue from the
-      person immediately after this agent.
-    */
-    properties.setProperty(
-      'LAST_DISTRIBUTED_AGENT_ID',
-      String(selectedAgent.id)
-    );
-
+        entrySheet .getRange(k + 1, 10) .setValue(new Date().toISOString());
+        entryFound = true; break; } }
+    if (!entryFound) { return; }
+    properties.setProperty( 'LAST_DISTRIBUTED_AGENT_ID', String(selectedAgent.id) );
     SpreadsheetApp.flush();
-
-    logActivity(
-      0,
-      'System',
-      'Auto-assigned #' + entryId + ' to ' + selectedAgent.name
-    );
-
-    addSystemRemark(
-      entryId,
-      'System',
-      'Lead auto-assigned to ' + selectedAgent.name
-    );
-
+    logActivity( 0, 'System', 'Auto-assigned #' + entryId + ' to ' + selectedAgent.name );
+    addSystemRemark( entryId, 'System', 'Lead auto-assigned to ' + selectedAgent.name );
   } catch (e) {
-
     console.error('Distribution error:', e);
-
   } finally {
-
-    try {
-      lock.releaseLock();
-    } catch (lockError) {}
-
-  }
-
+    try { lock.releaseLock(); } catch (lockError) {} }
 }
 
 function getAgentName(id) { 
-  try { 
-    var d=SpreadsheetApp.openById(SHEET_ID).getSheetByName('Agents').getDataRange().getValues(); 
-    for(var i=1;i<d.length;i++){if(d[i][0]==id)return d[i][3];} 
-    return 'Unknown'; 
+  try { var d=SpreadsheetApp.openById(SHEET_ID).getSheetByName('Agents').getDataRange().getValues(); 
+    for(var i=1;i<d.length;i++){if(d[i][0]==id)return d[i][3];} return 'Unknown'; 
   } catch(e){return'Unknown';} 
 }
