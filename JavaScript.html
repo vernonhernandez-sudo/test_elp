@@ -464,26 +464,88 @@ function handleLogin(e) {
     );
 }
 
+// function handleLogout() {
+
+//   if (SESSION_ID) {
+//     google.script.run.logoutUser(SESSION_ID);
+//   }
+
+//   stopSessionMonitoring();
+
+//   sessionStorage.removeItem('crm_session');
+
+//   SESSION_ID = null;
+//   currentUser = null;
+
+//   document.getElementById('agentScreen').style.display = 'none';
+//   document.getElementById('loginScreen').style.display = 'flex';
+
+//   document.getElementById('email').value = '';
+//   document.getElementById('password').value = '';
+
+//   document.getElementById('loginError').style.display = 'none';
+// }
+
 function handleLogout() {
 
+  // Logout from server
   if (SESSION_ID) {
     google.script.run.logoutUser(SESSION_ID);
   }
 
+  // Stop session monitoring
   stopSessionMonitoring();
 
+  // Clear browser session
   sessionStorage.removeItem('crm_session');
-
   SESSION_ID = null;
   currentUser = null;
 
-  document.getElementById('agentScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
+  // Hide all dashboard screens
+  var adminScreen = document.getElementById('adminScreen');
+  var superScreen = document.getElementById('superScreen');
+  var agentScreen = document.getElementById('agentScreen');
+  var leadgenScreen = document.getElementById('leadgenScreen');
 
-  document.getElementById('email').value = '';
-  document.getElementById('password').value = '';
+  if (adminScreen) {
+    adminScreen.style.display = 'none';
+  }
 
-  document.getElementById('loginError').style.display = 'none';
+  if (superScreen) {
+    superScreen.style.display = 'none';
+  }
+
+  if (agentScreen) {
+    agentScreen.style.display = 'none';
+  }
+
+  if (leadgenScreen) {
+    leadgenScreen.style.display = 'none';
+  }
+
+  // Show login screen
+  var loginScreen = document.getElementById('loginScreen');
+
+  if (loginScreen) {
+    loginScreen.style.display = 'flex';
+  }
+
+  // Clear login fields
+  var email = document.getElementById('email');
+  var password = document.getElementById('password');
+  var loginError = document.getElementById('loginError');
+
+  if (email) {
+    email.value = '';
+  }
+
+  if (password) {
+    password.value = '';
+  }
+
+  if (loginError) {
+    loginError.style.display = 'none';
+  }
 }
 
 function showToast(message, type) { 
@@ -1097,10 +1159,64 @@ function toggleColumnFilter(field, value, event) {
   return false; 
 }
 
-document.addEventListener('click', function(event) { 
-  if (!event.target.closest('.dropdown-content') && !event.target.closest('.filter-btn')) { 
-    document.querySelectorAll('.dropdown-content').forEach(function(d){d.style.display='none';}); 
-  } 
+// document.addEventListener('click', function(event) { 
+//   if (!event.target.closest('.dropdown-content') && !event.target.closest('.filter-btn')) { 
+//     document.querySelectorAll('.dropdown-content').forEach(function(d){d.style.display='none';}); 
+//   } 
+// });
+
+document.addEventListener('click', function(event) {
+
+  // Close notifications when clicking outside
+  if (!event.target.closest('#notif')) {
+
+    var notification = dashboardElement('notif');
+
+    if (notification) {
+      notification.classList.remove('is-open');
+      notification.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  // Close settings when clicking outside
+  if (!event.target.closest('.settings')) {
+
+    var settingsCard = dashboardElement('settingsCard');
+
+    var settingsButton =
+      document.getElementById(activeDashboardId) &&
+      document.getElementById(activeDashboardId)
+        .querySelector('.setting-icon');
+
+    if (settingsCard) {
+      settingsCard.classList.remove('is-open');
+    }
+
+    if (settingsButton) {
+      settingsButton.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  // Close filter dropdowns when clicking outside
+  if (
+    !event.target.closest('.dropdown-content') &&
+    !event.target.closest('.filter-btn')
+  ) {
+
+    var dashboard =
+      document.getElementById(activeDashboardId);
+
+    if (dashboard) {
+
+      dashboard
+        .querySelectorAll('.dropdown-content')
+        .forEach(function(d) {
+          d.style.display = 'none';
+        });
+
+    }
+  }
+
 });
 
 function updateSummaryCards(s) { 
