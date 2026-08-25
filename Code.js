@@ -1072,15 +1072,21 @@ function createTransferRequest(sessionId, entryId, targetAgentId, reason) {
      * can request the transfer.
      */
 
-    if (
-      user.role === 'Sales Partner' &&
-      String(assignedAgentId) !== String(user.id)
-    ) {
+    if (user.role === 'Sales Partner') {
 
-      return {
-        success: false,
-        message: 'You can only transfer leads assigned to you.'
-      };
+      var isAssignedToUser =
+        String(assignedAgentId) === String(user.id);
+
+      var isOwnLead =
+        !assignedAgentId &&
+        String(minedById) === String(user.id);
+
+      if (!isAssignedToUser && !isOwnLead) {
+        return {
+          success: false,
+          message: 'You can only transfer leads assigned to you.'
+        };
+      }
     }
 
     /*
@@ -1834,7 +1840,9 @@ function getEntries(sessionId) {
         assignedAgentId: ed[i][7],
 
         assignedAgentName:
-          am[ed[i][7]] || 'Own Lead',
+        ed[i][7]
+          ? (am[ed[i][7]] || 'Own Lead')
+          : 'Own Lead',
 
         /*
          * Status shown to frontend.
@@ -2383,96 +2391,31 @@ function getEntryActivity(sessionId, entryId) {
              new Date(a.timestamp);
 
     });
-
-    /*
-     * Limit the result to the newest 50
-     * activities.
-     */
-
     return items.slice(0, 50);
-
   } catch (e) {
-
-    console.error(
-      'getEntryActivity failed. Entry ID: ' +
-      entryId +
-      ' | Error: ' +
-      e.message +
-      ' | Stack: ' +
-      e.stack
-    );
-
-    return [];
-
-  }
-
+    console.error( 'getEntryActivity failed. Entry ID: ' + entryId + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); return []; }
 }
 
 function logActivity(uid, un, action) {
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sheet = ss.getSheetByName('ActivityLog');
-
-    if (!sheet) {
-      console.error('logActivity: ActivityLog sheet not found.');
-      return;
-    }
-
+    if (!sheet) { console.error('logActivity: ActivityLog sheet not found.'); return; }
     var nextId = sheet.getLastRow();
-
-    sheet.appendRow([
-      nextId,
-      uid,
-      un,
-      action,
-      new Date().toISOString()
-    ]);
-
+    sheet.appendRow([ nextId, uid, un, action, new Date().toISOString() ]);
   } catch (e) {
-
-    console.error(
-      'logActivity failed. Action: ' +
-      action +
-      ' | Error: ' +
-      e.message +
-      ' | Stack: ' +
-      e.stack
-    );
-  }
+    console.error( 'logActivity failed. Action: ' + action + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); }
 }
 
 function addSystemRemark(eid, un, msg) {
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sheet = ss.getSheetByName('Remarks');
-
-    if (!sheet) {
-      console.error('addSystemRemark: Remarks sheet not found.');
-      return;
-    }
-
+    if (!sheet) { console.error('addSystemRemark: Remarks sheet not found.'); return; }
     var nextId = sheet.getLastRow();
-
-    sheet.appendRow([
-      nextId,
-      eid,
-      new Date().toISOString(),
-      0,
-      un,
-      msg
-    ]);
-
+    sheet.appendRow([ nextId, eid, new Date().toISOString(), 0, un, msg ]);
   } catch (e) {
-
-    console.error(
-      'addSystemRemark failed. Entry ID: ' +
-      eid +
-      ' | Error: ' +
-      e.message +
-      ' | Stack: ' +
-      e.stack
-    );
-  }
+    console.error( 'addSystemRemark failed. Entry ID: ' + eid + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); }
 }
 
 // ========== Round-Robin DISTRIBUTION ==========
