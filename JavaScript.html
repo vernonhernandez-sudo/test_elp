@@ -24,7 +24,7 @@ var activeStatusFilter = null;
 
         populateUser();
 
-        showAgent();
+        routeUserByRole();
 
       } else {
 
@@ -58,6 +58,49 @@ function showAgent() {
   startSessionMonitoring();
 
   loadEntries();
+}
+
+function routeUserByRole() {
+
+  if (!currentUser || !currentUser.role) {
+    handleSessionExpired();
+    return;
+  }
+
+  var role = String(currentUser.role).trim();
+
+  // Hide login
+  document.getElementById('loginScreen').style.display = 'none';
+
+  // Hide all dashboards
+  document.getElementById('superAdminScreen').style.display = 'none';
+  document.getElementById('adminScreen').style.display = 'none';
+  document.getElementById('salesPartnerScreen').style.display = 'none';
+  document.getElementById('leadGenScreen').style.display = 'none';
+
+  // Route according to role
+  if (role === 'Super Admin') {
+
+    document.getElementById('superAdminScreen').style.display = 'flex';
+
+  } else if (role === 'Admin') {
+
+    document.getElementById('adminScreen').style.display = 'flex';
+
+  } else if (role === 'Sales Partner') {
+
+    document.getElementById('salesPartnerScreen').style.display = 'flex';
+
+  } else if (role === 'Lead Gen Specialist') {
+
+    document.getElementById('leadGenScreen').style.display = 'flex';
+
+  } else {
+
+    console.error('Unknown user role:', role);
+
+    handleSessionExpired();
+  }
 }
 
 
@@ -293,7 +336,7 @@ function handleLogin(e) {
          * after the other dashboard files are ready.
          */
 
-        showAgent();
+        routeUserByRole();
 
       } else {
 

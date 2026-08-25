@@ -801,8 +801,6 @@ var newEntryId = generateEntryId(data);
      */
     var initialStatus = '';
 
-    var initialStatus = '';
-
     if (
       userRole === 'Admin' ||
       userRole === 'Sales Partner'
