@@ -60,46 +60,139 @@ function showAgent() {
   loadEntries();
 }
 
+function showLeadGen() {
+
+  document.getElementById('loginScreen').style.display = 'none';
+
+  var m = document.getElementById('leadgenScreen');
+
+  if (!m) {
+    console.error('leadgenScreen not found.');
+    return;
+  }
+
+  m.style.display = 'flex';
+  m.style.flexDirection = 'column';
+  m.style.height = '100vh';
+  m.style.width = '100vw';
+
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  startSessionMonitoring();
+
+  // Lead Gen dashboard's initial loading function
+  loadLeadGenData();
+}
+
 function routeUserByRole() {
 
   if (!currentUser || !currentUser.role) {
-    handleSessionExpired();
+    console.error('No user role available.');
     return;
   }
 
   var role = String(currentUser.role).trim();
 
-  // Hide login
-  document.getElementById('loginScreen').style.display = 'none';
+  var loginScreen = document.getElementById('loginScreen');
+  var agentScreen = document.getElementById('agentScreen');
+  var leadgenScreen = document.getElementById('leadgenScreen');
 
-  // Hide all dashboards
-  document.getElementById('superAdminScreen').style.display = 'none';
-  document.getElementById('adminScreen').style.display = 'none';
-  document.getElementById('salesPartnerScreen').style.display = 'none';
-  document.getElementById('leadGenScreen').style.display = 'none';
+  // Hide everything first
+  if (loginScreen) {
+    loginScreen.style.display = 'none';
+  }
 
-  // Route according to role
-  if (role === 'Super Admin') {
+  if (agentScreen) {
+    agentScreen.style.display = 'none';
+  }
 
-    document.getElementById('superAdminScreen').style.display = 'flex';
+  if (leadgenScreen) {
+    leadgenScreen.style.display = 'none';
+  }
 
-  } else if (role === 'Admin') {
+  // ==============================
+  // SALES PARTNER
+  // ==============================
+  if (role === 'Sales Partner') {
 
-    document.getElementById('adminScreen').style.display = 'flex';
+    if (agentScreen) {
+      agentScreen.style.display = 'flex';
+      agentScreen.style.flexDirection = 'column';
+      agentScreen.style.height = '100vh';
+      agentScreen.style.width = '100vw';
+    }
 
-  } else if (role === 'Sales Partner') {
+    showAgent();
 
-    document.getElementById('salesPartnerScreen').style.display = 'flex';
+    return;
+  }
 
-  } else if (role === 'Lead Gen Specialist') {
+  // ==============================
+  // LEAD GEN SPECIALIST
+  // ==============================
+  if (role === 'Lead Gen Specialist') {
 
-    document.getElementById('leadGenScreen').style.display = 'flex';
+    if (leadgenScreen) {
+      leadgenScreen.style.display = 'flex';
+      leadgenScreen.style.flexDirection = 'column';
+      leadgenScreen.style.height = '100vh';
+      leadgenScreen.style.width = '100vw';
+    }
 
-  } else {
+    showLeadGen();
 
-    console.error('Unknown user role:', role);
+    return;
+  }
 
-    handleSessionExpired();
+  // ==============================
+  // ADMIN / SUPER ADMIN
+  // ==============================
+  if (
+    role === 'Admin' ||
+    role === 'Super Admin'
+  ) {
+
+    console.warn(
+      'Dashboard not available yet for role:',
+      role
+    );
+
+    if (loginScreen) {
+      loginScreen.style.display = 'flex';
+    }
+
+    var error = document.getElementById('loginError');
+
+    if (error) {
+      error.textContent =
+        role + ' dashboard is not available yet.';
+
+      error.style.display = 'block';
+    }
+
+    return;
+  }
+
+  // ==============================
+  // UNKNOWN ROLE
+  // ==============================
+  console.error(
+    'Unknown user role:',
+    role
+  );
+
+  if (loginScreen) {
+    loginScreen.style.display = 'flex';
+  }
+
+  var error = document.getElementById('loginError');
+
+  if (error) {
+    error.textContent =
+      'Your account has an invalid or unsupported role.';
+
+    error.style.display = 'block';
   }
 }
 
