@@ -58,6 +58,32 @@
   
   .table-wrapper { overflow-y: auto; overflow-x: visible; flex: 1; position: relative; }
 
+  #notif { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; cursor: pointer; }
+  .notificon { color: white; font-size: 23px; line-height: 1; }
+  /* .notificon::before { content: '\1F514'; } */
+  .notif-count { position: absolute; top: -3px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 10px; background: #e53935; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; line-height: 17px; }
+  .notif-text { position: absolute; top: calc(100% + 8px); left: 50%; display: flex; flex-direction: column; gap: 5px; transform: translateX(-83%) translateY(-4px) !important;; min-width: 250px; padding: 7px 10px; border-radius: 6px; background: white; color: #4a3b32; box-shadow: 0 6px 18px rgba(0,0,0,0.2); font-size: 11px; text-align: center; white-space: nowrap; opacity: 0; visibility: hidden; pointer-events: auto; cursor: pointer; transition: opacity .15s ease, transform .15s ease; z-index: 1000;  }
+  .notif-text:hover { color: #800000; }
+  .notif-request { display: block; width: 100%; padding: 10px; border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 16px; text-align: center; }
+  .notif-request:hover { color: #800000; background: rgba(128,0,0,0.08); border-radius: 5px; }
+  #notif.is-open .notif-text { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+  .settings { position: relative; z-index: 2; }
+  .setting-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; color: white; font-size: 22px; cursor: pointer; border:none; background: transparent;}
+  .setting-icon:hover, .setting-icon:focus { outline: none; }
+  .setting-card { display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 130px; padding: 10px; background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 1000; }
+  .setting-card.is-open { display: flex; flex-direction: column; gap: 8px; }
+  .setting-card button { width: 100%; padding: 7px 10px; border: none; text-align: center; border-radius: 5px; background: #f3f3f3; color: #555; cursor: pointer; font-size: 11px;  }
+  .setting-card button:hover { background: #ececec; }
+
+  .tab { display: flex; align-items: center; gap: 6px; padding: 8px 12px 0; border-bottom: 1px solid rgba(0,0,0,0.08); background: rgba(248,249,251,0.65); }
+  .tab button { flex: 0 0 auto; background: transparent; border: 1px solid transparent; border-bottom: 3px solid transparent; outline: none; cursor: pointer; padding: 10px 18px 9px; color: #777; border-radius: 7px 7px 0 0; transition: background-color .2s ease, color .2s ease, border-color .2s ease; font-size: 13px; font-weight: 700; }
+  .tab button:hover { background: rgba(128,0,0,0.07); color: #800000; }
+  .tab button:focus-visible { outline: 2px solid #800000; outline-offset: -2px; }
+  .tab button.active { background: #fff; color: #800000; border-color: rgba(128,0,0,0.12); border-bottom-color: #800000; box-shadow: 0 -1px 5px rgba(0,0,0,0.04); }
+  /* Style the tab content */
+  .tabcontent { display: none; min-height: 0; overflow: hidden; }
+  .tabcontent.is-active { display: flex; flex: 1; flex-direction: column; }
+
   #detailStatusSelect option:disabled {
   color: #aaa;
   background: #f5f5f5;
