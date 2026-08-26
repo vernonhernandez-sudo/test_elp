@@ -774,9 +774,6 @@ function addEntry(sessionId, entryData) {
 
     var data = sheet.getDataRange().getValues();
 
-// ==========================================
-// DUPLICATE LEAD CHECK
-// ==========================================
 
 if (isDuplicateLead(data, entryData)) {
   return {
@@ -786,19 +783,8 @@ if (isDuplicateLead(data, entryData)) {
   };
 }
 
-// Generate a unique ID
 var newEntryId = generateEntryId(data);
 
-    /*
-     * Initial status:
-     *
-     * Admin / Sales Partner mining their own lead
-     *     → Exclusive
-     *
-     * Lead Gen Specialist
-     *     → No Status
-     *     → System distributes it
-     */
     var initialStatus = '';
 
     if (
@@ -812,11 +798,11 @@ var newEntryId = generateEntryId(data);
       initialStatus = '';
     }
 
-    // Format U.S. phone numbers before saving
     var formattedPhones =
       formatUSPhoneNumbers(entryData.phones);
 
-    // Add the new entry
+    var createdAt = new Date().toISOString();
+
     sheet.appendRow([
       newEntryId,                  // A - ID
       entryData.authorName,        // B - Author
@@ -830,7 +816,8 @@ var newEntryId = generateEntryId(data);
       new Date().toISOString(),    // J - Created/Assigned At
       'No',                        // K
       'No',                        // L
-      user.id                      // M - Mined By
+      user.id,                      // M - Mined By
+      ''                           // N - StatusStartedAt
     ]);
 
     SpreadsheetApp.flush();
@@ -841,12 +828,6 @@ var newEntryId = generateEntryId(data);
       'Created entry #' + newEntryId + ': ' + entryData.authorName
     );
 
-    /*
-     * Only Lead Gen Specialist leads are automatically distributed.
-     *
-     * Admin and Sales Partner leads remain with the miner
-     * and start as Exclusive.
-     */
     if (userRole === 'Lead Gen Specialist') {
       distributeNewEntry(newEntryId);
     }
@@ -2098,12 +2079,26 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
      * Therefore no restriction is applied here.
      */
 
-    entrySheet.getRange(
+    var entrySheetRow =
       entryData.findIndex(function(row) {
         return String(row[0]) === String(entryId);
-      }) + 1,
-      9
-    ).setValue(newStatus);
+      }) + 1;
+
+    var statusStartedAt = '';
+
+    if (
+      newStatus === '' ||
+      newStatus === 'Pipe' ||
+      newStatus === 'VM'
+    ) {
+      statusStartedAt = new Date();
+    }
+
+    // Update Status
+    entrySheet.getRange(entrySheetRow, 9).setValue(newStatus);
+
+    // Update StatusStartedAt
+    entrySheet.getRange(entrySheetRow, 14).setValue(statusStartedAt);
 
     logActivity(
       u.id,
@@ -2130,6 +2125,235 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
       success: false,
       message: 'Unable to update status.'
     };
+  }
+}
+
+// ========== PROCESS LEAD GRACE PERIODS ==========
+
+function processLeadGracePeriods() {
+
+  var lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(10000);
+
+    var ss =
+      SpreadsheetApp.openById(SHEET_ID);
+
+    var entrySheet =
+      ss.getSheetByName('Entries');
+
+    if (!entrySheet) {
+      return;
+    }
+
+    var data =
+      entrySheet.getDataRange().getValues();
+
+    if (data.length <= 1) {
+      return;
+    }
+
+    var now = new Date();
+
+    var DAY_MS =
+      24 * 60 * 60 * 1000;
+
+    for (var i = 1; i < data.length; i++) {
+
+      var row = data[i];
+
+      var entryId = row[0];
+
+      var status =
+        row[8]
+          ? row[8].toString().trim()
+          : '';
+
+      var statusStartedAt =
+        row[13]
+          ? row[13].toString().trim()
+          : '';
+
+      // ==========================================
+      // ONLY PROCESS GRACE-PERIOD STATUSES
+      // ==========================================
+
+      if (
+        status !== '' &&
+        status !== 'Pipe' &&
+        status !== 'VM'
+      ) {
+        continue;
+      }
+
+      if (!statusStartedAt) {
+        continue;
+      }
+
+      var startedAt =
+        new Date(statusStartedAt);
+
+      if (isNaN(startedAt.getTime())) {
+        continue;
+      }
+
+      // ==========================================
+      // DETERMINE GRACE PERIOD
+      // ==========================================
+
+      var graceDays = 30;
+
+      if (status === 'VM') {
+        graceDays = 10;
+      }
+
+      var expirationTime =
+        startedAt.getTime() +
+        (graceDays * DAY_MS);
+
+      // ==========================================
+      // CHECK EXPIRATION
+      // ==========================================
+
+      if (
+        now.getTime() >=
+        expirationTime
+      ) {
+
+        expireAndRedistributeLead(
+          entryId
+        );
+      }
+    }
+
+  } catch (e) {
+
+    console.error(
+      'processLeadGracePeriods error:',
+      e
+    );
+
+  } finally {
+
+    try {
+      lock.releaseLock();
+    } catch (e) {}
+  }
+}
+
+// ========== EXPIRE AND REDISTRIBUTE LEAD ==========
+
+function expireAndRedistributeLead(entryId) {
+
+  try {
+
+    var ss =
+      SpreadsheetApp.openById(SHEET_ID);
+
+    var entrySheet =
+      ss.getSheetByName('Entries');
+
+    if (!entrySheet) {
+      return;
+    }
+
+    var data =
+      entrySheet.getDataRange().getValues();
+
+    for (var i = 1; i < data.length; i++) {
+
+      if (
+        String(data[i][0]) !==
+        String(entryId)
+      ) {
+        continue;
+      }
+
+      var rowNumber = i + 1;
+
+      var currentStatus =
+        data[i][8]
+          ? data[i][8].toString().trim()
+          : '';
+
+      // ==========================================
+      // SOLD IS ALWAYS FINAL
+      // ==========================================
+
+      if (currentStatus === 'Sold') {
+        return;
+      }
+
+      // ==========================================
+      // ONLY EXPIRE GRACE STATUSES
+      // ==========================================
+
+      if (
+        currentStatus !== '' &&
+        currentStatus !== 'Pipe' &&
+        currentStatus !== 'VM'
+      ) {
+        return;
+      }
+
+      var oldStatus =
+        currentStatus || 'No Status';
+
+      // ==========================================
+      // RESET TO NO STATUS
+      // ==========================================
+
+      entrySheet
+        .getRange(rowNumber, 9)
+        .setValue('');
+
+      // Clear timer temporarily.
+      // distributeNewEntry() will start
+      // a fresh timer after assigning it.
+      entrySheet
+        .getRange(rowNumber, 14)
+        .clearContent();
+
+      SpreadsheetApp.flush();
+
+      // ==========================================
+      // LOG EXPIRATION
+      // ==========================================
+
+      logActivity(
+        0,
+        'System',
+        '#' +
+        entryId +
+        ' expired from ' +
+        oldStatus +
+        ' and is being redistributed.'
+      );
+
+      addSystemRemark(
+        entryId,
+        'System',
+        oldStatus +
+        ' grace period expired. Lead returned to No Status and will be redistributed.'
+      );
+
+      // ==========================================
+      // REDISTRIBUTE
+      // ==========================================
+
+      distributeNewEntry(entryId);
+
+      return;
+    }
+
+  } catch (e) {
+
+    console.error(
+      'expireAndRedistributeLead error:',
+      e
+    );
   }
 }
 
@@ -2422,55 +2646,258 @@ function addSystemRemark(eid, un, msg) {
     console.error( 'addSystemRemark failed. Entry ID: ' + eid + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); }
 }
 
-// ========== Round-Robin DISTRIBUTION ==========
+// // ========== Round-Robin DISTRIBUTION ==========
+// function distributeNewEntry(entryId) {
+//   var lock = LockService.getScriptLock();
+//   try {
+//     lock.waitLock(10000);
+//     var ss = SpreadsheetApp.openById(SHEET_ID);
+//     var agentSheet = ss.getSheetByName('Agents');
+//     var entrySheet = ss.getSheetByName('Entries');
+//     if (!agentSheet || !entrySheet) { return; }
+//     var agentData = agentSheet.getDataRange().getValues();
+//     if (agentData.length <= 1) { return; }
+//     agentData.shift();
+//     var eligibleAgents = [];
+//     for (var i = 0; i < agentData.length; i++) {
+//       var agent = agentData[i];
+//       var agentId = agent[0];
+//       var agentName = agent[3];
+//       var role = agent[7] ? agent[7].toString().trim() : '';
+//       var status = agent[8] ? agent[8].toString().trim() : '';
+//       if ( status === 'Active' && (role === 'Admin' || role === 'Sales Partner') ) {
+//         eligibleAgents.push({ id: agentId, name: agentName, role: role, rowIndex: i }); } }
+//     if (eligibleAgents.length === 0) { return; }
+//     var properties = PropertiesService.getScriptProperties();
+//     var lastAgentId = properties.getProperty('LAST_DISTRIBUTED_AGENT_ID');
+//     var nextAgentIndex = 0;
+//     if (lastAgentId !== null) {
+//       var lastIndex = -1;
+//       for (var j = 0; j < eligibleAgents.length; j++) {
+//         if (String(eligibleAgents[j].id) === String(lastAgentId)) { lastIndex = j; break; } }
+//       if (lastIndex !== -1) { nextAgentIndex = (lastIndex + 1) % eligibleAgents.length;
+//       } else {
+//         nextAgentIndex = 0; } }
+//     var selectedAgent = eligibleAgents[nextAgentIndex];
+//     var entryData = entrySheet.getDataRange().getValues();
+//     var entryFound = false;
+//     for (var k = 1; k < entryData.length; k++) {
+//       if (String(entryData[k][0]) === String(entryId)) {
+//         entrySheet.getRange(k + 1, 8).setValue(selectedAgent.id);
+//         entrySheet .getRange(k + 1, 10) .setValue(new Date().toISOString());
+//         entryFound = true; break; } }
+//     if (!entryFound) { return; }
+//     properties.setProperty( 'LAST_DISTRIBUTED_AGENT_ID', String(selectedAgent.id) );
+//     SpreadsheetApp.flush();
+//     logActivity( 0, 'System', 'Auto-assigned #' + entryId + ' to ' + selectedAgent.name );
+//     addSystemRemark( entryId, 'System', 'Lead auto-assigned to ' + selectedAgent.name );
+//   } catch (e) {
+//     console.error('Distribution error:', e);
+//   } finally {
+//     try { lock.releaseLock(); } catch (lockError) {} }
+// }
+
+// ========== ROUND-ROBIN DISTRIBUTION ==========
+
 function distributeNewEntry(entryId) {
+
   var lock = LockService.getScriptLock();
+
   try {
+
     lock.waitLock(10000);
+
     var ss = SpreadsheetApp.openById(SHEET_ID);
+
     var agentSheet = ss.getSheetByName('Agents');
     var entrySheet = ss.getSheetByName('Entries');
-    if (!agentSheet || !entrySheet) { return; }
+
+    if (!agentSheet || !entrySheet) {
+      return;
+    }
+
     var agentData = agentSheet.getDataRange().getValues();
-    if (agentData.length <= 1) { return; }
+
+    if (agentData.length <= 1) {
+      return;
+    }
+
     agentData.shift();
+
     var eligibleAgents = [];
+
     for (var i = 0; i < agentData.length; i++) {
+
       var agent = agentData[i];
+
       var agentId = agent[0];
       var agentName = agent[3];
-      var role = agent[7] ? agent[7].toString().trim() : '';
-      var status = agent[8] ? agent[8].toString().trim() : '';
-      if ( status === 'Active' && (role === 'Admin' || role === 'Sales Partner') ) {
-        eligibleAgents.push({ id: agentId, name: agentName, role: role, rowIndex: i }); } }
-    if (eligibleAgents.length === 0) { return; }
-    var properties = PropertiesService.getScriptProperties();
-    var lastAgentId = properties.getProperty('LAST_DISTRIBUTED_AGENT_ID');
+
+      var role = agent[7]
+        ? agent[7].toString().trim()
+        : '';
+
+      var status = agent[8]
+        ? agent[8].toString().trim()
+        : '';
+
+      if (
+        status === 'Active' &&
+        (
+          role === 'Admin' ||
+          role === 'Sales Partner'
+        )
+      ) {
+
+        eligibleAgents.push({
+          id: agentId,
+          name: agentName,
+          role: role,
+          rowIndex: i
+        });
+
+      }
+    }
+
+    if (eligibleAgents.length === 0) {
+      return;
+    }
+
+    // ==========================================
+    // ROUND-ROBIN SELECTION
+    // ==========================================
+
+    var properties =
+      PropertiesService.getScriptProperties();
+
+    var lastAgentId =
+      properties.getProperty(
+        'LAST_DISTRIBUTED_AGENT_ID'
+      );
+
     var nextAgentIndex = 0;
+
     if (lastAgentId !== null) {
+
       var lastIndex = -1;
+
       for (var j = 0; j < eligibleAgents.length; j++) {
-        if (String(eligibleAgents[j].id) === String(lastAgentId)) { lastIndex = j; break; } }
-      if (lastIndex !== -1) { nextAgentIndex = (lastIndex + 1) % eligibleAgents.length;
+
+        if (
+          String(eligibleAgents[j].id) ===
+          String(lastAgentId)
+        ) {
+
+          lastIndex = j;
+          break;
+        }
+      }
+
+      if (lastIndex !== -1) {
+
+        nextAgentIndex =
+          (lastIndex + 1) %
+          eligibleAgents.length;
+
       } else {
-        nextAgentIndex = 0; } }
-    var selectedAgent = eligibleAgents[nextAgentIndex];
-    var entryData = entrySheet.getDataRange().getValues();
+
+        nextAgentIndex = 0;
+      }
+    }
+
+    var selectedAgent =
+      eligibleAgents[nextAgentIndex];
+
+    // ==========================================
+    // FIND ENTRY
+    // ==========================================
+
+    var entryData =
+      entrySheet.getDataRange().getValues();
+
     var entryFound = false;
+
     for (var k = 1; k < entryData.length; k++) {
-      if (String(entryData[k][0]) === String(entryId)) {
-        entrySheet.getRange(k + 1, 8).setValue(selectedAgent.id);
-        entrySheet .getRange(k + 1, 10) .setValue(new Date().toISOString());
-        entryFound = true; break; } }
-    if (!entryFound) { return; }
-    properties.setProperty( 'LAST_DISTRIBUTED_AGENT_ID', String(selectedAgent.id) );
+
+      if (
+        String(entryData[k][0]) ===
+        String(entryId)
+      ) {
+
+        var now = new Date().toISOString();
+
+        // H = Assigned Agent
+        entrySheet
+          .getRange(k + 1, 8)
+          .setValue(selectedAgent.id);
+
+        // I = Status
+        // System-distributed leads start as No Status
+        entrySheet
+          .getRange(k + 1, 9)
+          .setValue('');
+
+        // J = Created/Assigned At
+        entrySheet
+          .getRange(k + 1, 10)
+          .setValue(now);
+
+        // N = StatusStartedAt
+        entrySheet
+          .getRange(k + 1, 14)
+          .setValue(now);
+
+        entryFound = true;
+
+        break;
+      }
+    }
+
+    if (!entryFound) {
+      return;
+    }
+
+    // ==========================================
+    // SAVE ROUND-ROBIN POSITION
+    // ==========================================
+
+    properties.setProperty(
+      'LAST_DISTRIBUTED_AGENT_ID',
+      String(selectedAgent.id)
+    );
+
     SpreadsheetApp.flush();
-    logActivity( 0, 'System', 'Auto-assigned #' + entryId + ' to ' + selectedAgent.name );
-    addSystemRemark( entryId, 'System', 'Lead auto-assigned to ' + selectedAgent.name );
+
+    logActivity(
+      0,
+      'System',
+      'Auto-assigned #' +
+      entryId +
+      ' to ' +
+      selectedAgent.name
+    );
+
+    addSystemRemark(
+      entryId,
+      'System',
+      'Lead auto-assigned to ' +
+      selectedAgent.name
+    );
+
   } catch (e) {
-    console.error('Distribution error:', e);
+
+    console.error(
+      'Distribution error:',
+      e
+    );
+
   } finally {
-    try { lock.releaseLock(); } catch (lockError) {} }
+
+    try {
+      lock.releaseLock();
+    } catch (lockError) {}
+
+  }
 }
 
 function getAgentName(id) { 
