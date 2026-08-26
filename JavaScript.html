@@ -550,13 +550,59 @@ function setViewMode() {
   isEditMode = false; 
 }
 
-function toggleEditMode() { 
-  document.getElementById('editBtn').style.display = 'none'; 
-  document.getElementById('saveEditBtn').style.display = 'inline-block'; 
-  document.getElementById('cancelEditBtn').style.display = 'inline-block'; 
-  ['detailAuthorNameView','detailPhonesView','detailEmailView','detailBookView','detailISBNView','detailAddressView'].forEach(function(id){document.getElementById(id).style.display='none';}); 
-  ['detailAuthorNameEdit','detailPhonesEdit','detailEmailEdit','detailBookEdit','detailISBNEdit','detailAddressEdit'].forEach(function(id){document.getElementById(id).style.display='block';}); 
-  isEditMode = true; 
+function toggleEditMode() {
+
+  // Do not allow editing while transfer is pending
+  if (
+    selectedEntryData &&
+    selectedEntryData.transferPending === true
+  ) {
+    showToast(
+      'This lead is pending transfer approval and cannot be edited.',
+      'warning'
+    );
+    return;
+  }
+
+  // Sold leads cannot be edited
+  if (
+    selectedEntryData &&
+    String(selectedEntryData.status || '').trim() === 'Sold'
+  ) {
+    showToast(
+      'Sold leads cannot be edited.',
+      'warning'
+    );
+    return;
+  }
+
+  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('saveEditBtn').style.display = 'inline-block';
+  document.getElementById('cancelEditBtn').style.display = 'inline-block';
+
+  [
+    'detailAuthorNameView',
+    'detailPhonesView',
+    'detailEmailView',
+    'detailBookView',
+    'detailISBNView',
+    'detailAddressView'
+  ].forEach(function(id) {
+    document.getElementById(id).style.display = 'none';
+  });
+
+  [
+    'detailAuthorNameEdit',
+    'detailPhonesEdit',
+    'detailEmailEdit',
+    'detailBookEdit',
+    'detailISBNEdit',
+    'detailAddressEdit'
+  ].forEach(function(id) {
+    document.getElementById(id).style.display = 'block';
+  });
+
+  isEditMode = true;
 }
 
 function cancelEdit() { setViewMode(); }
@@ -650,30 +696,85 @@ function updateStatusDropdownPermissions(entry) {
   var currentStatus = entry.status ? String(entry.status).trim() : '';
   var noStatusOption = select.querySelector( 'option[value=""]' );
   var exclusiveOption = select.querySelector( 'option[value="Exclusive"]' );
-  if ( currentUser.role === 'Super Admin' || currentUser.role === 'Super Admin' ) { return; }
+  if (currentUser.role === 'Super Admin' || currentUser.role === 'Super Admin' ) { return; }
   if (currentUser.role === 'Admin') { if (isOwnLead) { if (noStatusOption) { noStatusOption.disabled = true; } } return; }
   if (currentUser.role === 'Sales Partner') {
     if (isOwnLead) { if (noStatusOption) { noStatusOption.disabled = true; } return; }
     if (noStatusOption) { if (currentStatus !== '') { noStatusOption.disabled = true; } }
-    if (exclusiveOption) { exclusiveOption.disabled = true; } return; } return; }
+    if (exclusiveOption) { exclusiveOption.disabled = true; } return; } return; 
+  }
 
 // ========== TRANSFER PENDING PERMISSIONS ==========
+
 function updateTransferPendingPermissions(entry) {
+
   if (!entry) return;
+
   var transferBtn = document.getElementById('transferBtn');
   var editBtn = document.getElementById('editBtn');
   var saveEditBtn = document.getElementById('saveEditBtn');
   var cancelEditBtn = document.getElementById('cancelEditBtn');
+  var statusSelect = document.getElementById('detailStatusSelect');
+
   var isPending = entry.transferPending === true;
+
+  // ==========================================
+  // PENDING TRANSFER
+  // ==========================================
+
   if (isPending) {
-    if (transferBtn) { transferBtn.disabled = true; transferBtn.style.opacity = '0.5'; transferBtn.style.cursor = 'not-allowed'; }
-    if (editBtn) { editBtn.disabled = true; editBtn.style.opacity = '0.5'; editBtn.style.cursor = 'not-allowed'; }
-    var statusSelect = document.getElementById('detailStatusSelect');
-    if (statusSelect) { statusSelect.disabled = true; }
-    if ( typeof isEditMode !== 'undefined' && isEditMode === true ) {
-      if (typeof setViewMode === 'function') { setViewMode(); } } return; }
-  if (transferBtn) { transferBtn.disabled = false; transferBtn.style.opacity = '1'; transferBtn.style.cursor = 'pointer'; }
-  if (editBtn) { editBtn.disabled = false; editBtn.style.opacity = '1'; editBtn.style.cursor = 'pointer'; } }
+
+    // Transfer button
+    if (transferBtn) {
+      transferBtn.disabled = true;
+      transferBtn.style.opacity = '0.5';
+      transferBtn.style.cursor = 'not-allowed';
+    }
+
+    // Edit button
+    if (editBtn) {
+      editBtn.disabled = true;
+      editBtn.style.opacity = '0.5';
+      editBtn.style.cursor = 'not-allowed';
+    }
+
+    // Status dropdown
+    if (statusSelect) {
+      statusSelect.disabled = true;
+    }
+
+    // If somehow already in edit mode, force view mode
+    if (
+      typeof isEditMode !== 'undefined' &&
+      isEditMode === true
+    ) {
+      if (typeof setViewMode === 'function') {
+        setViewMode();
+      }
+    }
+
+    return;
+  }
+
+  // ==========================================
+  // NOT PENDING
+  // ==========================================
+
+  if (transferBtn) {
+    transferBtn.disabled = false;
+    transferBtn.style.opacity = '1';
+    transferBtn.style.cursor = 'pointer';
+  }
+
+  if (editBtn) {
+    editBtn.disabled = false;
+    editBtn.style.opacity = '1';
+    editBtn.style.cursor = 'pointer';
+  }
+
+  // Re-apply normal status permissions
+  updateStatusDropdownPermissions(entry);
+}
 
 // ========== REMARKS & ACTIVITY ==========
 function toggleActivityView() { 
