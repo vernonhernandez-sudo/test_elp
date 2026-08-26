@@ -781,7 +781,7 @@ function updateTransferPendingPermissions(entry) {
 
   var transferBtn = document.getElementById('transferBtn');
   var editBtn = document.getElementById('editBtn');
-  var mwnBtn = document.getElementById('mwnBtn');
+  var confirmWrongNumberBtn = document.getElementById('confirmWrongNumberBtn');
   var saveEditBtn = document.getElementById('saveEditBtn');
   var cancelEditBtn = document.getElementById('cancelEditBtn');
   var statusSelect = document.getElementById('detailStatusSelect');
@@ -804,11 +804,11 @@ function updateTransferPendingPermissions(entry) {
       editBtn.style.cursor = 'not-allowed';
     }
 
-    // MWN button
-    if (mwnBtn) {
-      mwnBtn.disabled = true;
-      mwnBtn.style.opacity = '0.5';
-      mwnBtn.style.cursor = 'not-allowed';
+    // confirmWrongNumberBtn button
+    if (confirmWrongNumberBtn) {
+      confirmWrongNumberBtn.disabled = true;
+      confirmWrongNumberBtn.style.opacity = '0.5';
+      confirmWrongNumberBtn.style.cursor = 'not-allowed';
     }
 
     // Status dropdown
@@ -841,10 +841,10 @@ function updateTransferPendingPermissions(entry) {
     editBtn.style.cursor = 'pointer';
   }
 
-  if (mwnBtn) {
-    mwnBtn.disabled = false;
-    mwnBtn.style.opacity = '1';
-    mwnBtn.style.cursor = 'pointer';
+  if (confirmWrongNumberBtn) {
+    confirmWrongNumberBtn.disabled = false;
+    confirmWrongNumberBtn.style.opacity = '1';
+    confirmWrongNumberBtn.style.cursor = 'pointer';
   }
 
   // Re-apply normal status permissions
