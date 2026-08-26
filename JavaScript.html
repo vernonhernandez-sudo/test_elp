@@ -775,22 +775,18 @@ function updateStatusDropdownPermissions(entry) {
   }
 
 // ========== TRANSFER PENDING PERMISSIONS ==========
-
 function updateTransferPendingPermissions(entry) {
 
   if (!entry) return;
 
   var transferBtn = document.getElementById('transferBtn');
   var editBtn = document.getElementById('editBtn');
+  var mwnBtn = document.getElementById('mwnBtn');
   var saveEditBtn = document.getElementById('saveEditBtn');
   var cancelEditBtn = document.getElementById('cancelEditBtn');
   var statusSelect = document.getElementById('detailStatusSelect');
 
   var isPending = entry.transferPending === true;
-
-  // ==========================================
-  // PENDING TRANSFER
-  // ==========================================
 
   if (isPending) {
 
@@ -806,6 +802,13 @@ function updateTransferPendingPermissions(entry) {
       editBtn.disabled = true;
       editBtn.style.opacity = '0.5';
       editBtn.style.cursor = 'not-allowed';
+    }
+
+    // MWN button
+    if (mwnBtn) {
+      mwnBtn.disabled = true;
+      mwnBtn.style.opacity = '0.5';
+      mwnBtn.style.cursor = 'not-allowed';
     }
 
     // Status dropdown
@@ -826,10 +829,6 @@ function updateTransferPendingPermissions(entry) {
     return;
   }
 
-  // ==========================================
-  // NOT PENDING
-  // ==========================================
-
   if (transferBtn) {
     transferBtn.disabled = false;
     transferBtn.style.opacity = '1';
@@ -840,6 +839,12 @@ function updateTransferPendingPermissions(entry) {
     editBtn.disabled = false;
     editBtn.style.opacity = '1';
     editBtn.style.cursor = 'pointer';
+  }
+
+  if (mwnBtn) {
+    mwnBtn.disabled = false;
+    mwnBtn.style.opacity = '1';
+    mwnBtn.style.cursor = 'pointer';
   }
 
   // Re-apply normal status permissions
