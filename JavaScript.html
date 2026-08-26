@@ -802,7 +802,7 @@ function submitTransferRequest() {
         submitBtn.textContent = 'Submit Transfer Request'; }
       if (response && response.success) {
         showToast( 'Transfer request submitted for approval.', 'success' );
-        var modal = document.getElementById('transferModal');
+        var modal = document.getElementById('transferLeadModal')
         if (modal) { modal.style.display = 'none'; }
         if (targetSelect) { targetSelect.value = ''; }
         if (reasonInput) { reasonInput.value = ''; }
