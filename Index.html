@@ -7,18 +7,9 @@
   <style>body{margin:0;padding:0;overflow:hidden;}</style>
 </head>
 <body>
-  <div id="loginScreen">
-  <?!= include('Login'); ?>
-  </div>
-
-  <div id="agentScreen" style="display:none;">
-    <?!= include('Agent'); ?>
-  </div>
-
-  <div id="leadgenScreen" style="display:none;">
-    <?!= include('Leadgen'); ?>
-  </div>
-
+  <div id="loginScreen"> <?!= include('Login'); ?> </div>
+  <div id="agentScreen" style="display:none;"> <?!= include('Agent'); ?> </div>
+  <div id="leadgenScreen" style="display:none;"> <?!= include('Leadgen'); ?> </div>
   <?!= include('JavaScript'); ?>
 </body>
 </html>
