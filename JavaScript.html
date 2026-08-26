@@ -416,11 +416,39 @@ function renderTable(entries) {
   var h = ''; 
   entries.forEach(function(e) { 
     var sc, sb;
-    if (!e.status || e.status === '') { sc = '#999'; sb = '#f5f5f5'; }
-    else if (e.status === 'Sold') { sc = '#2e7d32'; sb = '#e8f5e9'; }
-    else if (e.status === 'DNC') { sc = '#c62828'; sb = '#ffebee'; }
-    else if (e.status === 'VM') { sc = '#c2185b'; sb = '#fce4ec'; }
-    else { sc = '#e67e22'; sb = '#fff3e0'; }
+
+if (!e.status || e.status === '') {
+  sc = '#999';
+  sb = '#f5f5f5';
+
+} else if (e.status === 'Pipe') {
+  sc = '#e67e22';
+  sb = '#fff3e0';
+
+} else if (e.status === 'VM') {
+  sc = '#3498db';
+  sb = '#ebf5fb';
+
+} else if (e.status === 'DNC') {
+  sc = '#e74c3c';
+  sb = '#fdedeb';
+
+} else if (e.status === 'Exclusive') {
+  sc = '#2c3e50';
+  sb = '#ecf0f1';
+
+} else if (e.status === 'Sold') {
+  sc = '#2e7d32';
+  sb = '#e8f5e9';
+
+} else if (e.status === 'Pending') {
+  sc = '#2c3e50';
+  sb = '#ecf0f1';
+
+} else {
+  sc = '#999';
+  sb = '#f5f5f5';
+}
     h += '<tr onclick="selectEntry('+e.id+')" style="cursor:pointer;border-bottom:1px solid #f0f0f0;" onmouseover="this.style.background=\'#f8f9fb\'" onmouseout="this.style.background=\'transparent\'">' +
       '<td style="padding:9px 12px;font-weight:500;text-align:center;">'+escapeHtml(e.authorName)+'</td>' +
       '<td style="padding:9px 12px;color:#555;text-align:center;">'+escapeHtml(e.book)+'</td>' +
@@ -673,13 +701,54 @@ function getStatusLabel(status) {
     default: return status; } }
 
 function updateStatusBadge(status) {
+
   var b = document.getElementById('detailStatus');
-  if (!status || status === '') { b.style.background = '#f5f5f5'; b.style.color = '#999'; }
-  else if (status === 'Pending') { b.style.background = '#ecf0f1'; b.style.color = '#2c3e50'; }
-  else if (status === 'Sold') { b.style.background = '#e8f5e9'; b.style.color = '#2e7d32'; }
-  else if (status === 'DNC') { b.style.background = '#ffebee'; b.style.color = '#c62828'; }
-  else if (status === 'VM') { b.style.background = '#fce4ec'; b.style.color = '#c2185b'; }
-  else { b.style.background = '#fff3e0'; b.style.color = '#e67e22'; } b.textContent = getStatusLabel(status); }
+
+  if (!b) return;
+
+  if (!status || status === '') {
+
+    b.style.background = '#f5f5f5';
+    b.style.color = '#999';
+
+  } else if (status === 'Pipe') {
+
+    b.style.background = '#fff3e0';
+    b.style.color = '#e67e22';
+
+  } else if (status === 'VM') {
+
+    b.style.background = '#ebf5fb';
+    b.style.color = '#3498db';
+
+  } else if (status === 'DNC') {
+
+    b.style.background = '#fdedeb';
+    b.style.color = '#e74c3c';
+
+  } else if (status === 'Exclusive') {
+
+    b.style.background = '#ecf0f1';
+    b.style.color = '#2c3e50';
+
+  } else if (status === 'Sold') {
+
+    b.style.background = '#e8f5e9';
+    b.style.color = '#2e7d32';
+
+  } else if (status === 'Pending') {
+
+    b.style.background = '#ecf0f1';
+    b.style.color = '#2c3e50';
+
+  } else {
+
+    b.style.background = '#f5f5f5';
+    b.style.color = '#999';
+  }
+
+  b.textContent = getStatusLabel(status);
+}
 
 // ========== STATUS DROPDOWN PERMISSIONS ==========
 function updateStatusDropdownPermissions(entry) {
