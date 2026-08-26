@@ -2278,6 +2278,11 @@ function expireAndRedistributeLead(entryId) {
           ? data[i][8].toString().trim()
           : '';
 
+      var previousAssignedAgentId =
+        data[i][7]
+          ? data[i][7].toString().trim()
+          : '';
+
       // ==========================================
       // SOLD IS ALWAYS FINAL
       // ==========================================
@@ -2343,7 +2348,10 @@ function expireAndRedistributeLead(entryId) {
       // REDISTRIBUTE
       // ==========================================
 
-      distributeNewEntry(entryId);
+      distributeNewEntry(
+        entryId,
+        previousAssignedAgentId
+      );
 
       return;
     }
@@ -2699,7 +2707,9 @@ function addSystemRemark(eid, un, msg) {
 
 // ========== ROUND-ROBIN DISTRIBUTION ==========
 
-function distributeNewEntry(entryId) {
+// ========== ROUND-ROBIN DISTRIBUTION ==========
+
+function distributeNewEntry(entryId, excludedAgentId) {
 
   var lock = LockService.getScriptLock();
 
@@ -2775,7 +2785,7 @@ function distributeNewEntry(entryId) {
         'LAST_DISTRIBUTED_AGENT_ID'
       );
 
-    var nextAgentIndex = 0;
+    var startIndex = 0;
 
     if (lastAgentId !== null) {
 
@@ -2795,18 +2805,73 @@ function distributeNewEntry(entryId) {
 
       if (lastIndex !== -1) {
 
-        nextAgentIndex =
+        startIndex =
           (lastIndex + 1) %
           eligibleAgents.length;
 
-      } else {
-
-        nextAgentIndex = 0;
       }
     }
 
-    var selectedAgent =
-      eligibleAgents[nextAgentIndex];
+    // ==========================================
+    // FIND NEXT ELIGIBLE AGENT
+    // ==========================================
+    //
+    // IMPORTANT:
+    // We DO NOT remove the excluded agent
+    // from eligibleAgents.
+    //
+    // This preserves the actual round-robin
+    // position.
+    //
+    // If the next person happens to be the
+    // previous owner, we simply skip them
+    // and continue to the next person.
+    // ==========================================
+
+    var selectedAgent = null;
+
+    for (
+      var offset = 0;
+      offset < eligibleAgents.length;
+      offset++
+    ) {
+
+      var candidateIndex =
+        (startIndex + offset) %
+        eligibleAgents.length;
+
+      var candidate =
+        eligibleAgents[candidateIndex];
+
+      // Skip only the previous owner when
+      // this function was called with an
+      // excludedAgentId.
+      if (
+        excludedAgentId &&
+        String(candidate.id) ===
+        String(excludedAgentId)
+      ) {
+        continue;
+      }
+
+      selectedAgent = candidate;
+      break;
+    }
+
+    // ==========================================
+    // SAFETY CHECK
+    // ==========================================
+
+    if (!selectedAgent) {
+
+      console.error(
+        'No eligible agent available for entry #' +
+        entryId +
+        ' after applying exclusion.'
+      );
+
+      return;
+    }
 
     // ==========================================
     // FIND ENTRY
@@ -2824,7 +2889,8 @@ function distributeNewEntry(entryId) {
         String(entryId)
       ) {
 
-        var now = new Date().toISOString();
+        var now =
+          new Date().toISOString();
 
         // H = Assigned Agent
         entrySheet
@@ -2832,7 +2898,8 @@ function distributeNewEntry(entryId) {
           .setValue(selectedAgent.id);
 
         // I = Status
-        // System-distributed leads start as No Status
+        // System-distributed leads start
+        // with No Status.
         entrySheet
           .getRange(k + 1, 9)
           .setValue('');
@@ -2843,6 +2910,7 @@ function distributeNewEntry(entryId) {
           .setValue(now);
 
         // N = StatusStartedAt
+        // Start a fresh 30-day No Status timer.
         entrySheet
           .getRange(k + 1, 14)
           .setValue(now);
@@ -2867,6 +2935,10 @@ function distributeNewEntry(entryId) {
     );
 
     SpreadsheetApp.flush();
+
+    // ==========================================
+    // LOG
+    // ==========================================
 
     logActivity(
       0,
