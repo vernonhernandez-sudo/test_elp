@@ -1066,6 +1066,10 @@ function createTransferRequest(sessionId, entryId, targetAgentId, reason) {
      */
 
     var assignedAgentId = entryRow[7];
+    
+    var minedById = entryRow[12]
+      ? entryRow[12].toString().trim()
+      : '';
 
     /*
      * Only the current assigned Sales Partner

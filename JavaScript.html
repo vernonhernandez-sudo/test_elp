@@ -782,36 +782,137 @@ function loadTransferTargets() {
     .withFailureHandler(function(error) { console.error( 'getTransferTargets FAILED:', error );
       select.innerHTML = '<option value="">ERROR: ' + (error.message || error.toString()) + '</option>'; }) .getTransferTargets(SESSION_ID); }
 
-    // Submit Transfer Request
+   // Submit Transfer Request
 function submitTransferRequest() {
-  if (!selectedEntryId) { showToast('No lead selected.', 'error'); return; }
+
+  if (!selectedEntryId) {
+    showToast('No lead selected.', 'error');
+    return;
+  }
+
   var targetSelect = document.getElementById('transferTarget');
   var reasonInput = document.getElementById('transferReason');
-  if (!targetSelect) { showToast('Transfer target field not found.', 'error'); return; }
+
+  if (!targetSelect) {
+    showToast('Transfer target field not found.', 'error');
+    return;
+  }
+
   var targetAgentId = targetSelect.value;
   var reason = reasonInput ? reasonInput.value.trim() : '';
-  if (!targetAgentId) { showToast( 'Please select a transfer target.', 'error' ); return; }
+
+  if (!targetAgentId) {
+    showToast('Please select a transfer target.', 'error');
+    return;
+  }
+
   var submitBtn = document.getElementById('submitTransferBtn');
-  if (submitBtn) { if (submitBtn.disabled) { return; }
+
+  if (submitBtn) {
+    if (submitBtn.disabled) return;
+
     submitBtn.disabled = true;
     submitBtn.style.opacity = '0.5';
-    submitBtn.textContent = 'Submitting...'; }
-  google.script.run .withSuccessHandler(function(response) { if (submitBtn) {
+    submitBtn.textContent = 'Submitting...';
+  }
+
+  console.log('TRANSFER DEBUG:', {
+    sessionId: SESSION_ID,
+    entryId: selectedEntryId,
+    targetAgentId: targetAgentId,
+    reason: reason
+  });
+
+  google.script.run
+
+    .withSuccessHandler(function(response) {
+
+      console.log(
+        'CREATE TRANSFER RESPONSE:',
+        response
+      );
+
+      if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.style.opacity = '1';
-        submitBtn.textContent = 'Submit Transfer Request'; }
+        submitBtn.textContent = 'Request Transfer';
+      }
+
       if (response && response.success) {
-        showToast( 'Transfer request submitted for approval.', 'success' );
-        var modal = document.getElementById('transferLeadModal')
-        if (modal) { modal.style.display = 'none'; }
-        if (targetSelect) { targetSelect.value = ''; }
-        if (reasonInput) { reasonInput.value = ''; }
+
+        showToast(
+          response.message ||
+          'Transfer request submitted for approval.',
+          'success'
+        );
+
+        var modal =
+          document.getElementById('transferLeadModal');
+
+        if (modal) {
+          modal.style.display = 'none';
+        }
+
+        if (targetSelect) {
+          targetSelect.value = '';
+        }
+
+        if (reasonInput) {
+          reasonInput.value = '';
+        }
+
         loadRemarksOnly();
+
       } else {
-        showToast( (response && response.message) || 'Unable to submit transfer request.', 'error' ); } })
-    .withFailureHandler(function(error) { if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.textContent = 'Submit Transfer Request'; }
-      console.error( 'submitTransferRequest failed:', error );
-      showToast( 'Unable to submit transfer request. Please try again.', 'error' );
-      handleServerError( error, 'createTransferRequest' ); })
-    .createTransferRequest( SESSION_ID, selectedEntryId, targetAgentId, reason ); }
+
+        console.error(
+          'TRANSFER SERVER REJECTED:',
+          response
+        );
+
+        showToast(
+          'TRANSFER REJECTED: ' +
+          (
+            response && response.message
+              ? response.message
+              : 'No message returned by server.'
+          ),
+          'error'
+        );
+      }
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      console.error(
+        'CREATE TRANSFER SERVER ERROR:',
+        error
+      );
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.textContent = 'Request Transfer';
+      }
+
+      showToast(
+        'SERVER ERROR: ' +
+        (
+          error && error.message
+            ? error.message
+            : String(error)
+        ),
+        'error'
+      );
+
+    })
+
+    .createTransferRequest(
+      SESSION_ID,
+      selectedEntryId,
+      targetAgentId,
+      reason
+    );
+}
 </script>
