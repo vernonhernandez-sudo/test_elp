@@ -1666,7 +1666,6 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
 }
 
 // ========== GET ENTRIES ==========
-
 function getEntries(sessionId) {
 
   try {
@@ -1721,6 +1720,17 @@ function getEntries(sessionId) {
     ad.shift();
 
     var am = {};
+    var arm = {};
+
+    for (var k = 0; k < ad.length; k++) {
+
+      am[ad[k][0]] = ad[k][3];
+
+      arm[ad[k][0]] =
+        ad[k][7]
+          ? ad[k][7].toString().trim()
+          : '';
+    }
 
     for (var k = 0; k < ad.length; k++) {
       am[ad[k][0]] = ad[k][3];
@@ -1773,6 +1783,19 @@ function getEntries(sessionId) {
         assignedAgentId,
         minedById
       )) {
+        continue;
+      }
+
+      // ==========================================
+      // WRONG NUMBER LEADS
+      // ==========================================
+
+      var entryStatus =
+        ed[i][8]
+          ? ed[i][8].toString().trim()
+          : '';
+
+      if (entryStatus === 'Wrong Number') {
         continue;
       }
 
@@ -1855,7 +1878,12 @@ function getEntries(sessionId) {
 
         createdAt: ed[i][9] || '',
 
-        minedById: ed[i][12] || ''
+        minedById: ed[i][12] || '',
+
+        minedByRole:
+        minedById
+          ? (arm[minedById] || '')
+          : ''
 
       });
 
@@ -1973,24 +2001,6 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
       };
     }
 
-    /*
-     * Entries columns:
-     *
-     * [0] ID
-     * [1] Author
-     * [2] Phones
-     * [3] Email
-     * [4] Book
-     * [5] ISBN
-     * [6] Address
-     * [7] Assigned Agent ID
-     * [8] Status
-     * [9] Created/Assigned At
-     * [10] ...
-     * [11] ...
-     * [12] Mined By
-     */
-
     var currentStatus = entryRow[8]
       ? entryRow[8].toString().trim()
       : '';
@@ -2029,18 +2039,7 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
       }
     }
 
-    /*
-     * SALES PARTNER RULE
-     *
-     * A Sales Partner cannot manually return a
-     * Lead Gen Specialist lead to "- No Status -".
-     *
-     * A Sales Partner also cannot change a Lead Gen
-     * Specialist lead to "Exclusive".
-     *
-     * Exclusive is only for leads mined by the
-     * Sales Partner or Admin themselves.
-     */
+    
     if (userRole === 'Sales Partner') {
 
       var isOwnLead =
@@ -2064,20 +2063,6 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
         };
       }
     }
-
-    /*
-     * ADMIN RULE
-     *
-     * Admins are allowed to manually use:
-     * - No Status
-     * - Pipe
-     * - Exclusive
-     * - VM
-     * - DNC
-     * - Sold
-     *
-     * Therefore no restriction is applied here.
-     */
 
     var entrySheetRow =
       entryData.findIndex(function(row) {
@@ -2128,8 +2113,260 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
   }
 }
 
-// ========== PROCESS LEAD GRACE PERIODS ==========
+// ========== MARK LEAD AS WRONG NUMBER ==========
+function markLeadWrongNumber(sessionId, entryId) {
 
+  try {
+
+    var u = getUserFromCache(sessionId);
+
+    if (!u) {
+      return {
+        success: false,
+        message: 'Session expired.'
+      };
+    }
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+
+    var entrySheet = ss.getSheetByName('Entries');
+    var agentsSheet = ss.getSheetByName('Agents');
+
+    if (!entrySheet || !agentsSheet) {
+      return {
+        success: false,
+        message: 'Required sheet not found.'
+      };
+    }
+
+    var entryData =
+      entrySheet.getDataRange().getValues();
+
+    var agentData =
+      agentsSheet.getDataRange().getValues();
+
+    var entryRow = null;
+    var entrySheetRow = -1;
+
+    // ==========================================
+    // FIND ENTRY
+    // ==========================================
+
+    for (var i = 1; i < entryData.length; i++) {
+
+      if (
+        String(entryData[i][0]) ===
+        String(entryId)
+      ) {
+
+        entryRow = entryData[i];
+        entrySheetRow = i + 1;
+
+        break;
+      }
+    }
+
+    if (!entryRow) {
+
+      return {
+        success: false,
+        message: 'Entry not found.'
+      };
+    }
+
+    // ==========================================
+    // CURRENT STATUS
+    // ==========================================
+
+    var currentStatus =
+      entryRow[8]
+        ? entryRow[8].toString().trim()
+        : '';
+
+    // Already Wrong Number
+
+    if (currentStatus === 'Wrong Number') {
+
+      return {
+        success: false,
+        message: 'This lead is already marked as Wrong Number.'
+      };
+    }
+
+    // ==========================================
+    // FIND LOGGED-IN USER ROLE
+    // ==========================================
+
+    var userRole = '';
+
+    for (var j = 1; j < agentData.length; j++) {
+
+      if (
+        String(agentData[j][0]) ===
+        String(u.id)
+      ) {
+
+        userRole =
+          agentData[j][7]
+            ? agentData[j][7].toString().trim()
+            : '';
+
+        break;
+      }
+    }
+
+    // ==========================================
+    // ONLY ADMIN / SALES PARTNER CAN USE MWN
+    // ==========================================
+
+    if (
+      userRole !== 'Admin' &&
+      userRole !== 'Sales Partner'
+    ) {
+
+      return {
+        success: false,
+        message: 'You are not authorized to mark this lead as Wrong Number.'
+      };
+    }
+
+    // ==========================================
+    // FIND WHO MINED THE LEAD
+    // ==========================================
+
+    var minedById =
+      entryRow[12]
+        ? entryRow[12].toString().trim()
+        : '';
+
+    if (!minedById) {
+
+      return {
+        success: false,
+        message: 'This lead does not have a recorded Lead Gen Specialist.'
+      };
+    }
+
+    var minedByRole = '';
+    var minedByName = 'Unknown';
+
+    for (var k = 1; k < agentData.length; k++) {
+
+      if (
+        String(agentData[k][0]) ===
+        String(minedById)
+      ) {
+
+        minedByRole =
+          agentData[k][7]
+            ? agentData[k][7].toString().trim()
+            : '';
+
+        minedByName =
+          agentData[k][3]
+            ? agentData[k][3].toString().trim()
+            : 'Unknown';
+
+        break;
+      }
+    }
+
+    // ==========================================
+    // MUST HAVE BEEN MINED BY LGS
+    // ==========================================
+
+    if (minedByRole !== 'Lead Gen Specialist') {
+
+      return {
+        success: false,
+        message: 'Only leads mined by a Lead Gen Specialist can be marked as Wrong Number.'
+      };
+    }
+
+    // ==========================================
+    // CURRENT OWNER
+    // ==========================================
+
+    var previousOwnerId =
+      entryRow[7]
+        ? entryRow[7].toString().trim()
+        : '';
+
+    var previousOwnerName =
+      previousOwnerId
+        ? (getAgentName(previousOwnerId) || 'Unknown')
+        : 'Unassigned';
+
+    // ==========================================
+    // SAVE MWN STATE
+    // ==========================================
+
+    // Status
+    entrySheet
+      .getRange(entrySheetRow, 9)
+      .setValue('Wrong Number');
+
+    // Pause grace period
+    entrySheet
+      .getRange(entrySheetRow, 14)
+      .clearContent();
+
+    SpreadsheetApp.flush();
+
+    // ==========================================
+    // ACTIVITY LOG
+    // ==========================================
+
+    logActivity(
+      u.id,
+      u.name,
+      'Marked #' +
+      entryId +
+      ' as Wrong Number. Previous status: ' +
+      (currentStatus || 'No Status') +
+      '. Previous owner: ' +
+      previousOwnerName +
+      '. Returned to Lead Gen Specialist: ' +
+      minedByName
+    );
+
+    // ==========================================
+    // SYSTEM REMARK
+    // ==========================================
+
+    addSystemRemark(
+      entryId,
+      u.name,
+      'Wrong Number: Lead returned to Lead Gen Specialist ' +
+      minedByName +
+      ' for re-mining. Previous owner: ' +
+      previousOwnerName +
+      '. Previous status: ' +
+      (currentStatus || 'No Status') +
+      '. Grace period paused.'
+    );
+
+    return {
+      success: true,
+      message: 'Lead marked as Wrong Number and returned to Lead Gen Specialist.',
+      entryId: entryId
+    };
+
+  } catch (e) {
+
+    console.error(
+      'markLeadWrongNumber error:',
+      e
+    );
+
+    return {
+      success: false,
+      message: 'Unable to mark lead as Wrong Number.'
+    };
+  }
+}
+
+// ========== PROCESS LEAD GRACE PERIODS ==========
 function processLeadGracePeriods() {
 
   var lock = LockService.getScriptLock();
@@ -2707,8 +2944,6 @@ function addSystemRemark(eid, un, msg) {
 
 // ========== ROUND-ROBIN DISTRIBUTION ==========
 
-// ========== ROUND-ROBIN DISTRIBUTION ==========
-
 function distributeNewEntry(entryId, excludedAgentId) {
 
   var lock = LockService.getScriptLock();
@@ -2773,9 +3008,7 @@ function distributeNewEntry(entryId, excludedAgentId) {
       return;
     }
 
-    // ==========================================
     // ROUND-ROBIN SELECTION
-    // ==========================================
 
     var properties =
       PropertiesService.getScriptProperties();
@@ -2811,22 +3044,6 @@ function distributeNewEntry(entryId, excludedAgentId) {
 
       }
     }
-
-    // ==========================================
-    // FIND NEXT ELIGIBLE AGENT
-    // ==========================================
-    //
-    // IMPORTANT:
-    // We DO NOT remove the excluded agent
-    // from eligibleAgents.
-    //
-    // This preserves the actual round-robin
-    // position.
-    //
-    // If the next person happens to be the
-    // previous owner, we simply skip them
-    // and continue to the next person.
-    // ==========================================
 
     var selectedAgent = null;
 

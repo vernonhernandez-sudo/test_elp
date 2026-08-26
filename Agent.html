@@ -130,6 +130,12 @@
             style="padding:5px 12px;background:#3c19ff;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">
             Transfer
           </button>
+          <button
+            onclick="openWrongNumberModal()"
+            id="wrongNumberBtn"
+            style="display:none;padding:5px 12px;background:#d35400;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">
+            MWN
+          </button>
           <span id="detailStatus" style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;"></span>
         </div>
       </div>
@@ -225,5 +231,138 @@
       <button type="button" onclick="closeTransferModal()" style=" padding:9px 16px; background:#888; color:white; border:none; border-radius:7px; cursor:pointer; font-size:12px; " > Cancel </button>
       <button type="button" id="submitTransferBtn" onclick="submitTransferRequest()" style=" padding:9px 16px; background:#3c19ff; color:white; border:none; border-radius:7px; cursor:pointer; font-size:12px; " > Request Transfer </button>
     </div>
+    <!-- ========== WRONG NUMBER MODAL ========== -->
+
+<div
+  id="wrongNumberModal"
+  style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.45);
+    z-index:10000;
+    align-items:center;
+    justify-content:center;
+  "
+>
+
+  <div
+    style="
+      width:390px;
+      max-width:90%;
+      background:white;
+      border-radius:12px;
+      padding:24px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    "
+  >
+
+    <div
+      style="
+        text-align:center;
+        margin-bottom:18px;
+      "
+    >
+
+      <div
+        style="
+          font-size:17px;
+          font-weight:700;
+          color:#3d3223;
+        "
+      >
+        Mark as Wrong Number?
+      </div>
+
+      <div
+        style="
+          font-size:11px;
+          color:#999;
+          margin-top:5px;
+          line-height:1.5;
+        "
+      >
+        This lead will be returned to the Lead Gen Specialist
+        for re-mining and the current grace-period countdown
+        will be paused.
+      </div>
+
+    </div>
+
+    <div
+      id="wrongNumberLeadInfo"
+      style="
+        background:#f7f5f0;
+        border-radius:8px;
+        padding:12px;
+        margin-bottom:18px;
+        font-size:12px;
+        color:#5d4e37;
+      "
+    >
+      -
+    </div>
+
+    <div
+      id="wrongNumberError"
+      style="
+        display:none;
+        background:#fff3f3;
+        color:#c62828;
+        border:1px solid #f1c4c4;
+        border-radius:7px;
+        padding:9px;
+        font-size:11px;
+        margin-bottom:12px;
+      "
+    ></div>
+
+    <div
+      style="
+        display:flex;
+        justify-content:flex-end;
+        gap:8px;
+      "
+    >
+
+      <button
+        type="button"
+        onclick="closeWrongNumberModal()"
+        style="
+          padding:9px 16px;
+          background:#888;
+          color:white;
+          border:none;
+          border-radius:7px;
+          cursor:pointer;
+          font-size:12px;
+        "
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        id="confirmWrongNumberBtn"
+        onclick="confirmWrongNumber()"
+        style="
+          padding:9px 16px;
+          background:#d35400;
+          color:white;
+          border:none;
+          border-radius:7px;
+          cursor:pointer;
+          font-size:12px;
+        "
+      >
+        Mark as Wrong Number
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
   </div>
 </div>

@@ -563,6 +563,7 @@ function selectEntry(entryId) {
   updateStatusBadge(selectedEntryData.status);
   updateStatusDropdownPermissions(selectedEntryData);
   updateTransferPendingPermissions(selectedEntryData);
+  updateWrongNumberButton(selectedEntryData);
   showingAllActivity = false; 
   document.getElementById('toggleActivityBtn').textContent = 'Show All Activity'; 
   loadRemarksOnly();
@@ -1084,5 +1085,139 @@ function submitTransferRequest() {
       targetAgentId,
       reason
     );
+}
+
+// ========== WRONG NUMBER ==========
+
+function openWrongNumberModal() {
+
+  if (!selectedEntryData) {
+    showToast('Please select an entry first.', 'warning');
+    return;
+  }
+
+  document.getElementById('wrongNumberLeadInfo').textContent =
+    (selectedEntryData.authorName || 'Unknown Author') +
+    ' — ' +
+    (selectedEntryData.book || 'Unknown Book');
+
+  document.getElementById('wrongNumberError').style.display = 'none';
+
+  document.getElementById('wrongNumberModal').style.display = 'flex';
+}
+
+function closeWrongNumberModal() {
+
+  document.getElementById('wrongNumberModal').style.display = 'none';
+
+  document.getElementById('wrongNumberError').style.display = 'none';
+}
+
+function confirmWrongNumber() {
+
+  if (!selectedEntryId) {
+    showToast('No entry selected.', 'error');
+    return;
+  }
+
+  var btn =
+    document.getElementById('confirmWrongNumberBtn');
+
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  google.script.run
+
+    .withSuccessHandler(function(result) {
+
+      btn.disabled = false;
+      btn.textContent = 'Mark as Wrong Number';
+
+      if (!result || !result.success) {
+
+        document.getElementById('wrongNumberError').textContent =
+          (result && result.message)
+            ? result.message
+            : 'Unable to mark lead as Wrong Number.';
+
+        document.getElementById('wrongNumberError').style.display =
+          'block';
+
+        return;
+      }
+
+      closeWrongNumberModal();
+
+      showToast(
+        'Lead marked as Wrong Number and returned for re-mining.',
+        'success'
+      );
+
+      // Clear selected entry
+      selectedEntryData = null;
+      selectedEntryId = null;
+
+      document.getElementById('detailContent').style.display = 'none';
+      document.getElementById('detailEmpty').style.display = 'block';
+
+      // Refresh the table
+      loadEntries();
+
+    })
+
+    .withFailureHandler(function(error) {
+
+      console.error(
+        'confirmWrongNumber failed:',
+        error
+      );
+
+      btn.disabled = false;
+      btn.textContent = 'Mark as Wrong Number';
+
+      document.getElementById('wrongNumberError').textContent =
+        'Unable to process the request. Please try again.';
+
+      document.getElementById('wrongNumberError').style.display =
+        'block';
+
+    })
+
+    .markLeadWrongNumber(
+      SESSION_ID,
+      selectedEntryId
+    );
+}
+
+function updateWrongNumberButton(entry) {
+
+  var btn =
+    document.getElementById('wrongNumberBtn');
+
+  if (!btn) {
+    return;
+  }
+
+  // Hidden by default
+  btn.style.display = 'none';
+
+  if (!entry) {
+    return;
+  }
+
+  // Already MWN
+  if (
+    entry.status === 'Wrong Number' ||
+    entry.originalStatus === 'Wrong Number'
+  ) {
+    return;
+  }
+
+  // Only leads mined by LGS can use MWN
+  if (
+    entry.minedByRole === 'Lead Gen Specialist'
+  ) {
+    btn.style.display = 'inline-block';
+  }
 }
 </script>
