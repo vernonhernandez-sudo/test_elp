@@ -160,7 +160,7 @@ function populateUser() {
     displayName += ' • Super Admin' + (team ? ' (' + team + ')' : '');
 
   } else if (role === 'Lead Gen Specialist') {
-    displayName += ' • Lead Miner' + (team ? ' - ' + team : '');
+    displayName += ' • ' + team;
   }
 
   document.getElementById('userName').textContent = displayName;
