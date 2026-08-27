@@ -368,7 +368,7 @@ function loginUser(email, password) {
 
           email: row[4],
 
-          team: row[5],
+          team: row[6],
 
           role: role
         };
