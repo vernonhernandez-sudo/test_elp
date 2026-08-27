@@ -703,7 +703,9 @@ function submitLeadgenEntry(e) {
   e.preventDefault();
 
   if (isSubmitting) return;
-  isSubmitting = true;
+
+  var btn = document.getElementById('leadgenEntrySubmitBtn');
+  var er = document.getElementById('leadgenEntryError');
 
   var an = document.getElementById('leadgenEntryAuthorName').value.trim(),
       bk = document.getElementById('leadgenEntryBook').value.trim(),
@@ -719,14 +721,22 @@ function submitLeadgenEntry(e) {
     if (v) ph.push(v);
   });
 
-  var er = document.getElementById('leadgenEntryError');
   er.style.display = 'none';
 
   if (!an || !bk || !is || ph.length === 0) {
     er.textContent = 'Author Name, Phone Number, Book Title, and ISBN are required.';
     er.style.display = 'block';
-    isSubmitting = false;
     return;
+  }
+
+  isSubmitting = true;
+
+  if (btn) {
+    btn.disabled = true;
+    btn.dataset.originalText = btn.textContent;
+    btn.textContent = 'Saving...';
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'wait';
   }
 
   google.script.run
@@ -735,18 +745,37 @@ function submitLeadgenEntry(e) {
 
       if (r && r.success) {
         clearLeadgenEntryDraft();
-        showToast('Entry saved!', 'success');
+
         document.getElementById('leadgenAddEntryModal').style.display = 'none';
+
+        showToast('Entry saved successfully!', 'success');
+
         loadEntries();
       } else {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = btn.dataset.originalText || 'Save Entry';
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
+        }
+
         er.textContent = (r && r.message) || 'Unable to save entry.';
         er.style.display = 'block';
       }
     })
     .withFailureHandler(function(error) {
       isSubmitting = false;
+
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.originalText || 'Save Entry';
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+      }
+
       er.textContent = 'Unable to save entry. Please try again.';
       er.style.display = 'block';
+
       handleServerError(error, 'addLeadgenEntry');
     })
     .addEntry(SESSION_ID, {
