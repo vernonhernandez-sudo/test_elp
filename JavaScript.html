@@ -545,6 +545,7 @@ function openLeadgenEntryModal() {
     document.getElementById('leadgenEntryAuthorName').value = draft.authorName || '';
     document.getElementById('leadgenEntryEmail').value = draft.email || '';
     document.getElementById('leadgenEntryBook').value = draft.book || '';
+    document.getElementById('leadgenEntryISBN').value = draft.isbn || '';
     document.getElementById('leadgenEntryAddress').value = draft.address || '';
 
     var container = document.getElementById('leadgenPhoneNumbersContainer');
@@ -569,6 +570,7 @@ function openLeadgenEntryModal() {
     document.getElementById('leadgenEntryAuthorName').value = '';
     document.getElementById('leadgenEntryEmail').value = '';
     document.getElementById('leadgenEntryBook').value = '';
+    document.getElementById('leadgenEntryISBN').value = '';
     document.getElementById('leadgenEntryAddress').value = '';
 
     document.getElementById('leadgenPhoneNumbersContainer').innerHTML =
@@ -584,11 +586,7 @@ function openLeadgenEntryModal() {
   document.getElementById('leadgenEntryAuthorName').focus();
 }
 
-function closeLeadgenEntryModal() {
-  saveLeadgenEntryDraft();
-  document.getElementById('leadgenAddEntryModal').style.display = 'none';
-}
-
+// ========== LEAD GEN ENTRY DRAFT ==========
 function saveLeadgenEntryDraft() {
   var phones = [];
 
@@ -602,6 +600,7 @@ function saveLeadgenEntryDraft() {
     phones: phones,
     email: document.getElementById('leadgenEntryEmail').value,
     book: document.getElementById('leadgenEntryBook').value,
+    isbn: document.getElementById('leadgenEntryISBN').value,
     address: document.getElementById('leadgenEntryAddress').value
   };
 
@@ -625,6 +624,12 @@ function clearLeadgenEntryDraft() {
   sessionStorage.removeItem(LEADGEN_ENTRY_DRAFT_KEY);
 }
 
+function closeLeadgenEntryModal() {
+  saveLeadgenEntryDraft();
+  document.getElementById('leadgenAddEntryModal').style.display = 'none';
+}
+
+// ========== LEAD GEN PHONE FORMATTER ==========
 function handleLeadgenUSPhoneInput(input) {
   var formatted = formatUSPhoneNumber(input.value);
 
@@ -672,9 +677,12 @@ function updateLeadgenRemoveButtons() {
   });
 }
 
+// ========== LEAD GEN ENTRY SUBMIT BUTTON ==========
 function updateLeadgenEntrySubmitButton() {
-  var an = document.getElementById('leadgenEntryAuthorName').value.trim();
-  var bk = document.getElementById('leadgenEntryBook').value.trim();
+  var an = document.getElementById('leadgenEntryAuthorName').value.trim(),
+      bk = document.getElementById('leadgenEntryBook').value.trim(),
+      is = document.getElementById('leadgenEntryISBN').value.trim();
+
   var phones = document.querySelectorAll('.leadgenEntryPhone');
   var hasPhone = false;
 
@@ -686,23 +694,25 @@ function updateLeadgenEntrySubmitButton() {
 
   if (!b) return;
 
-  b.disabled = !(an && bk && hasPhone);
+  b.disabled = !(an && bk && is && hasPhone);
   b.style.opacity = b.disabled ? '0.5' : '1';
 }
 
+// ========== SUBMIT LEAD GEN ENTRY ==========
 function submitLeadgenEntry(e) {
   e.preventDefault();
 
   if (isSubmitting) return;
   isSubmitting = true;
 
-  var an = document.getElementById('leadgenEntryAuthorName').value.trim();
-  var bk = document.getElementById('leadgenEntryBook').value.trim();
-  var em = document.getElementById('leadgenEntryEmail').value.trim();
-  var ad = document.getElementById('leadgenEntryAddress').value.trim();
+  var an = document.getElementById('leadgenEntryAuthorName').value.trim(),
+      bk = document.getElementById('leadgenEntryBook').value.trim(),
+      is = document.getElementById('leadgenEntryISBN').value.trim(),
+      em = document.getElementById('leadgenEntryEmail').value.trim(),
+      ad = document.getElementById('leadgenEntryAddress').value.trim();
 
-  var pi = document.querySelectorAll('.leadgenEntryPhone');
-  var ph = [];
+  var pi = document.querySelectorAll('.leadgenEntryPhone'),
+      ph = [];
 
   pi.forEach(function(i) {
     var v = i.value.trim();
@@ -712,8 +722,8 @@ function submitLeadgenEntry(e) {
   var er = document.getElementById('leadgenEntryError');
   er.style.display = 'none';
 
-  if (!an || !bk || ph.length === 0) {
-    er.textContent = 'Author Name, Phone Number, and Book Title are required.';
+  if (!an || !bk || !is || ph.length === 0) {
+    er.textContent = 'Author Name, Phone Number, Book Title, and ISBN are required.';
     er.style.display = 'block';
     isSubmitting = false;
     return;
@@ -744,7 +754,7 @@ function submitLeadgenEntry(e) {
       phones: ph.join(', '),
       email: em,
       book: bk,
-      isbn: '',
+      isbn: is,
       address: ad
     });
 }
