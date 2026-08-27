@@ -582,29 +582,54 @@ function openLeadgenEntryModal() {
       '</div>';
   }
 
+  // Hide previous error
   document.getElementById('leadgenEntryError').style.display = 'none';
 
   // =====================================================
-  // FIX: Update button whenever required fields change
+  // RESET SUBMIT BUTTON EVERY TIME MODAL OPENS
   // =====================================================
 
-  document.getElementById('leadgenEntryAuthorName')
-    .addEventListener('input', updateLeadgenEntrySubmitButton);
+  var submitBtn = document.getElementById('leadgenEntrySubmitBtn');
 
-  document.getElementById('leadgenEntryBook')
-    .addEventListener('input', updateLeadgenEntrySubmitButton);
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Save Entry';
+    submitBtn.style.opacity = '1';
+    submitBtn.style.cursor = 'pointer';
+  }
 
-  document.getElementById('leadgenEntryISBN')
-    .addEventListener('input', updateLeadgenEntrySubmitButton);
+  // =====================================================
+  // UPDATE BUTTON WHEN REQUIRED FIELDS CHANGE
+  // =====================================================
+
+  // Use oninput instead of addEventListener so handlers
+  // do not accumulate every time the modal is reopened.
+
+  document.getElementById('leadgenEntryAuthorName').oninput =
+    updateLeadgenEntrySubmitButton;
+
+  document.getElementById('leadgenEntryBook').oninput =
+    updateLeadgenEntrySubmitButton;
+
+  document.getElementById('leadgenEntryISBN').oninput =
+    updateLeadgenEntrySubmitButton;
 
   document.querySelectorAll('.leadgenEntryPhone').forEach(function(input) {
-    input.addEventListener('input', updateLeadgenEntrySubmitButton);
+
+    input.oninput = function() {
+      handleLeadgenUSPhoneInput(this);
+      updateLeadgenEntrySubmitButton();
+    };
+
   });
 
-  // Initial state
+  // Check the button's correct state after loading the fields
   updateLeadgenEntrySubmitButton();
 
+  // Open modal
   document.getElementById('leadgenAddEntryModal').style.display = 'flex';
+
+  // Focus author field
   document.getElementById('leadgenEntryAuthorName').focus();
 }
 
