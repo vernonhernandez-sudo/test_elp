@@ -198,16 +198,46 @@ function handleLogin(e) {
 }
 
 function handleLogout() {
-  if (SESSION_ID) { google.script.run.logoutUser(SESSION_ID); }
-  stopSessionMonitoring();
+
+  // Logout from server
+  if (SESSION_ID) {
+    google.script.run.logoutUser(SESSION_ID);
+  }
+
+  // Clear browser session
   sessionStorage.removeItem('crm_session');
+
   SESSION_ID = null;
   currentUser = null;
-  document.getElementById('agentScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('email').value = '';
-  document.getElementById('password').value = '';
-  document.getElementById('loginError').style.display = 'none';
+
+  // Hide all dashboard screens
+  var mainScreen = document.getElementById('agentScreen');
+  var adminScreen = document.getElementById('adminScreen');
+  var superScreen = document.getElementById('superScreen');
+
+  if (mainScreen) {
+    mainScreen.style.display = 'none';
+  }
+
+  if (adminScreen) {
+    adminScreen.style.display = 'none';
+  }
+
+  if (superScreen) {
+    superScreen.style.display = 'none';
+  }
+
+  // Clear ONLY password
+  var password = document.getElementById('password');
+  if (password) {
+    password.value = '';
+  }
+
+  // Show login screen
+  var loginScreen = document.getElementById('loginScreen');
+  if (loginScreen) {
+    loginScreen.style.display = 'block';
+  }
 }
 
 function showToast(message, type) { 
