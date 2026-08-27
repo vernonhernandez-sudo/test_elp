@@ -2113,6 +2113,226 @@ function updateEntryStatus(sessionId, entryId, newStatus) {
   }
 }
 
+// ========== EXTEND LEAD GRACE PERIOD ==========
+function extendLeadGracePeriod(sessionId, entryId) {
+  try {
+
+    var u = getUserFromCache(sessionId);
+
+    if (!u) {
+      return {
+        success: false,
+        message: 'Session expired.'
+      };
+    }
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var entrySheet = ss.getSheetByName('Entries');
+    var agentsSheet = ss.getSheetByName('Agents');
+
+    if (!entrySheet || !agentsSheet) {
+      return {
+        success: false,
+        message: 'Required sheet not found.'
+      };
+    }
+
+    var entryData = entrySheet.getDataRange().getValues();
+    var agentData = agentsSheet.getDataRange().getValues();
+
+    var entryRowIndex = -1;
+    var entryRow = null;
+
+    // ==========================================
+    // FIND ENTRY
+    // ==========================================
+
+    for (var i = 1; i < entryData.length; i++) {
+
+      if (
+        String(entryData[i][0]) ===
+        String(entryId)
+      ) {
+
+        entryRowIndex = i;
+        entryRow = entryData[i];
+
+        break;
+      }
+    }
+
+    if (entryRowIndex === -1 || !entryRow) {
+      return {
+        success: false,
+        message: 'Entry not found.'
+      };
+    }
+
+    // ==========================================
+    // CURRENT STATUS
+    // ==========================================
+
+    var currentStatus =
+      entryRow[8]
+        ? entryRow[8].toString().trim()
+        : '';
+
+    // ==========================================
+    // ONLY THESE STATUSES CAN BE EXTENDED
+    // ==========================================
+
+    var allowedStatuses = [
+      '',
+      'Pipe',
+      'VM'
+    ];
+
+    if (
+      allowedStatuses.indexOf(currentStatus) === -1
+    ) {
+
+      return {
+        success: false,
+        message:
+          'This lead does not have an extendable grace period.'
+      };
+    }
+
+    // ==========================================
+    // FIND USER ROLE
+    // ==========================================
+
+    var userRole = '';
+
+    for (var j = 1; j < agentData.length; j++) {
+
+      if (
+        String(agentData[j][0]) ===
+        String(u.id)
+      ) {
+
+        userRole =
+          agentData[j][7]
+            ? agentData[j][7].toString().trim()
+            : '';
+
+        break;
+      }
+    }
+
+    // ==========================================
+    // ONLY ADMIN AND SALES PARTNER CAN EXTEND
+    // ==========================================
+
+    if (
+      userRole !== 'Admin' &&
+      userRole !== 'Sales Partner'
+    ) {
+
+      return {
+        success: false,
+        message:
+          'You do not have permission to extend leads.'
+      };
+    }
+
+    // ==========================================
+    // SALES PARTNER ACCESS CHECK
+    // ==========================================
+
+    if (userRole === 'Sales Partner') {
+
+      var assignedAgentId =
+        entryRow[7]
+          ? entryRow[7].toString().trim()
+          : '';
+
+      var minedById =
+        entryRow[12]
+          ? entryRow[12].toString().trim()
+          : '';
+
+      var hasAccess =
+        String(assignedAgentId) === String(u.id) ||
+        String(minedById) === String(u.id);
+
+      if (!hasAccess) {
+
+        return {
+          success: false,
+          message:
+            'You do not have permission to extend this lead.'
+        };
+      }
+    }
+
+    // ==========================================
+    // RESET STATUS START TIME
+    // ==========================================
+
+    var newStatusStartedAt = new Date();
+
+    /*
+     * Column N = StatusStartedAt
+     *
+     * Status remains unchanged.
+     */
+
+    entrySheet
+      .getRange(entryRowIndex + 1, 14)
+      .setValue(newStatusStartedAt);
+
+    SpreadsheetApp.flush();
+
+    // ==========================================
+    // ACTIVITY LOG
+    // ==========================================
+
+    var statusLabel =
+      currentStatus === ''
+        ? 'No Status'
+        : currentStatus;
+
+    logActivity(
+      u.id,
+      u.name,
+      'Extended grace period #' +
+        entryId +
+        ' (' +
+        statusLabel +
+        ')'
+    );
+
+    addSystemRemark(
+      entryId,
+      u.name,
+      'Grace period extended for ' +
+        statusLabel
+    );
+
+    return {
+      success: true,
+      message: 'Grace period extended successfully.',
+      status: currentStatus,
+      statusStartedAt:
+        newStatusStartedAt.toISOString()
+    };
+
+  } catch (e) {
+
+    console.error(
+      'extendLeadGracePeriod error:',
+      e
+    );
+
+    return {
+      success: false,
+      message:
+        'Unable to extend the grace period.'
+    };
+  }
+}
+
 // ========== MARK LEAD AS WRONG NUMBER ==========
 function markLeadWrongNumber(sessionId, entryId) {
 
