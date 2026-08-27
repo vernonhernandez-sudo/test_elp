@@ -10,8 +10,11 @@ function include(filename) { return HtmlService.createHtmlOutputFromFile(filenam
 
 // Sales Partner / Lead Gen Specialist shift settings
 const SHIFT_TIMEZONE = 'Asia/Manila';
-const SHIFT_START_HOUR = 0; // 12:00 AM PHT
-const SHIFT_END_HOUR = 10;   // 10:00 AM PHT
+const SHIFT_START_HOUR = 23;    // 11:45 PM PHT
+const SHIFT_START_MINUTE = 45;  // 11:45 PM PHT
+
+const SHIFT_END_HOUR = 10;      // 10:00 AM PHT
+const SHIFT_END_MINUTE = 0;     // 10:00 AM PHT
 
 const SESSION_DURATION_MS = 10 * 60 * 60 * 1000 + 30 * 60 * 1000;
 
@@ -48,13 +51,46 @@ function getCurrentShiftKey() {
  * 12:00 AM - 10:00 AM PHT login window.
  */
 function isWithinSalesShift() {
+
   var now = new Date();
 
   var hour = Number(
-    Utilities.formatDate(now, SHIFT_TIMEZONE, 'H')
+    Utilities.formatDate(
+      now,
+      SHIFT_TIMEZONE,
+      'H'
+    )
   );
 
-  return hour >= SHIFT_START_HOUR && hour < SHIFT_END_HOUR;
+  var minute = Number(
+    Utilities.formatDate(
+      now,
+      SHIFT_TIMEZONE,
+      'm'
+    )
+  );
+
+  var currentMinutes =
+    (hour * 60) + minute;
+
+  var startMinutes =
+    (23 * 60) + 45; // 11:45 PM
+
+  var endMinutes =
+    10 * 60; // 10:00 AM
+
+  /*
+   * Shift crosses midnight:
+   *
+   * 11:45 PM → 11:59 PM
+   * OR
+   * 12:00 AM → 9:59 AM
+   */
+
+  return (
+    currentMinutes >= startMinutes ||
+    currentMinutes < endMinutes
+  );
 }
 
 /**
@@ -63,27 +99,84 @@ function isWithinSalesShift() {
  * The shift ends at 10:00 AM PHT on the current date.
  */
 function getShiftEndTimestamp() {
-  var dateString = Utilities.formatDate(
-    new Date(),
-    SHIFT_TIMEZONE,
-    'yyyy-MM-dd'
+
+  var now = new Date();
+
+  var currentHour = Number(
+    Utilities.formatDate(
+      now,
+      SHIFT_TIMEZONE,
+      'H'
+    )
   );
 
-  var shiftEndString = dateString + ' 10:00:00';
-
-  var parts = shiftEndString.match(
-    /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/
+  var currentMinute = Number(
+    Utilities.formatDate(
+      now,
+      SHIFT_TIMEZONE,
+      'm'
+    )
   );
 
-  // Convert PHT local time to a real timestamp.
-  var utcMillis = Date.UTC(
-    Number(parts[1]),
-    Number(parts[2]) - 1,
-    Number(parts[3]),
-    Number(parts[4]) - 8, // PHT = UTC+8
-    Number(parts[5]),
-    Number(parts[6])
-  );
+  var currentMinutes =
+    (currentHour * 60) + currentMinute;
+
+  var endMinutes =
+    10 * 60; // 10:00 AM
+
+  /*
+   * If we are currently between
+   * 12:00 AM and 9:59 AM,
+   * the shift ends TODAY at 10:00 AM.
+   *
+   * If we are currently between
+   * 11:45 PM and 11:59 PM,
+   * the shift ends TOMORROW at 10:00 AM.
+   */
+
+  var endDate =
+    new Date(now);
+
+  if (currentMinutes >= 0 && currentMinutes < endMinutes) {
+
+    // Same calendar day
+    endDate.setDate(
+      endDate.getDate()
+    );
+
+  } else {
+
+    // Shift started at 11:45 PM,
+    // so 10:00 AM is tomorrow.
+    endDate.setDate(
+      endDate.getDate() + 1
+    );
+  }
+
+  var dateString =
+    Utilities.formatDate(
+      endDate,
+      SHIFT_TIMEZONE,
+      'yyyy-MM-dd'
+    );
+
+  var shiftEndString =
+    dateString + ' 10:00:00';
+
+  var parts =
+    shiftEndString.match(
+      /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/
+    );
+
+  var utcMillis =
+    Date.UTC(
+      Number(parts[1]),
+      Number(parts[2]) - 1,
+      Number(parts[3]),
+      Number(parts[4]) - 8,
+      Number(parts[5]),
+      Number(parts[6])
+    );
 
   return utcMillis;
 }
@@ -304,7 +397,7 @@ function loginUser(email, password) {
             return {
               success: false,
               message:
-                'Your shift is currently closed. Admin, Sales Partner, and Lead Gen Specialist accounts can only log in from 12:00 AM to 10:00 AM Philippine Standard Time.'
+                'Your shift is currently closed. Accounts can only log in from 11:45 PM to 10:00 AM PST.'
             };
           }
         }
