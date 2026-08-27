@@ -138,10 +138,24 @@ function updateClock() {
 
 function populateUser() {
   if (!currentUser) return;
-  var p = currentUser.name.split(' ').filter(Boolean), ini = p.length > 1 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : (p[0]||'').substring(0,2).toUpperCase();
-  document.getElementById('avatar').textContent = ini; 
-  document.getElementById('userName').textContent = currentUser.name; 
-  document.getElementById('userEmail').textContent = currentUser.email || '';
+
+  var p = currentUser.name.split(' ').filter(Boolean),
+      ini = p.length > 1
+        ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
+        : (p[0] || '').substring(0, 2).toUpperCase();
+
+  document.getElementById('avatar').textContent = ini;
+
+  document.getElementById('userName').textContent =
+    currentUser.name || '';
+
+  document.getElementById('userRoleTeam').textContent =
+    currentUser.role && currentUser.team
+      ? currentUser.role + ' • ' + currentUser.team
+      : (currentUser.role || currentUser.team || '');
+
+  document.getElementById('userEmail').textContent =
+    currentUser.email || '';
 }
 
 function handleLogin(e) {

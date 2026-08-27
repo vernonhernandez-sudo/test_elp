@@ -368,6 +368,8 @@ function loginUser(email, password) {
 
           email: row[4],
 
+          team: row[5],
+
           role: role
         };
 
@@ -458,6 +460,8 @@ function loginUser(email, password) {
 
           email: user.email,
 
+          team: user.team,
+
           role: user.role,
 
           loginTime: loginTime,
@@ -494,6 +498,8 @@ function loginUser(email, password) {
             name: user.name,
 
             email: user.email,
+
+            team: user.team,
 
             role: user.role
           }
