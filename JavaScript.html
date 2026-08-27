@@ -408,7 +408,7 @@ function loadEntries(callback) { if (!SESSION_ID) return;
   document.getElementById('entriesTableBody').innerHTML = '<tr><td colspan="5" style="padding:60px;text-align:center;color:#aaa;">Loading...</td></tr>';
   google.script.run .withSuccessHandler(function(r) {
       if (r && r.success) {
-        allEntries = r.entries;
+        allEntries = r.entries.slice().reverse();
         buildFilterOptions();
         filterTable();
         updateSummaryCards(r.summary); 
