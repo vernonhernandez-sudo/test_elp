@@ -545,7 +545,6 @@ function openLeadgenEntryModal() {
     document.getElementById('leadgenEntryAuthorName').value = draft.authorName || '';
     document.getElementById('leadgenEntryEmail').value = draft.email || '';
     document.getElementById('leadgenEntryBook').value = draft.book || '';
-    // document.getElementById('leadgenEntryISBN').value = draft.isbn || '';
     document.getElementById('leadgenEntryAddress').value = draft.address || '';
 
     var container = document.getElementById('leadgenPhoneNumbersContainer');
@@ -601,7 +600,6 @@ function saveLeadgenEntryDraft() {
     phones: phones,
     email: document.getElementById('leadgenEntryEmail').value,
     book: document.getElementById('leadgenEntryBook').value,
-    isbn: document.getElementById('leadgenEntryISBN').value,
     address: document.getElementById('leadgenEntryAddress').value
   };
 
@@ -704,18 +702,15 @@ function updateLeadgenEntrySubmitButton() {
 }
 
 // ========== LEAD GEN SUBMIT ==========
-
 function submitLeadgenEntry(e) {
   e.preventDefault();
 
   if (isSubmitting) return;
-
   isSubmitting = true;
 
   var an = document.getElementById('leadgenEntryAuthorName').value.trim();
   var bk = document.getElementById('leadgenEntryBook').value.trim();
   var em = document.getElementById('leadgenEntryEmail').value.trim();
-  var is = document.getElementById('leadgenEntryISBN').value.trim();
   var ad = document.getElementById('leadgenEntryAddress').value.trim();
 
   var pi = document.querySelectorAll('.leadgenEntryPhone');
@@ -741,7 +736,6 @@ function submitLeadgenEntry(e) {
       isSubmitting = false;
 
       if (r && r.success) {
-        clearLeadgenEntryDraft();
         showToast('Entry saved!', 'success');
         document.getElementById('leadgenAddEntryModal').style.display = 'none';
         loadEntries();
@@ -761,7 +755,7 @@ function submitLeadgenEntry(e) {
       phones: ph.join(', '),
       email: em,
       book: bk,
-      isbn: is,
+      isbn: '',
       address: ad
     });
 }
