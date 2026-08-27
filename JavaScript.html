@@ -146,13 +146,24 @@ function populateUser() {
 
   document.getElementById('avatar').textContent = ini;
 
-  document.getElementById('userName').textContent =
-    currentUser.name || '';
+  var displayName = currentUser.name || '';
+  var role = currentUser.role || '';
+  var team = currentUser.team || '';
 
-  document.getElementById('userRoleTeam').textContent =
-    currentUser.role && currentUser.team
-      ? currentUser.role + ' • ' + currentUser.team
-      : (currentUser.role || currentUser.team || '');
+  if (role === 'Sales Partner') {
+    displayName += ' • Sales Partner' + (team ? ' (' + team + ')' : '');
+
+  } else if (role === 'Admin') {
+    displayName += ' • Admin' + (team ? ' (' + team + ')' : '');
+
+  } else if (role === 'Super Admin') {
+    displayName += ' • Super Admin' + (team ? ' (' + team + ')' : '');
+
+  } else if (role === 'Lead Gen Specialist') {
+    displayName += ' • Lead Miner' + (team ? ' - ' + team : '');
+  }
+
+  document.getElementById('userName').textContent = displayName;
 
   document.getElementById('userEmail').textContent =
     currentUser.email || '';
