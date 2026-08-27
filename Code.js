@@ -621,30 +621,30 @@ function logoutUser(sessionId) {
   };
 }
 
-// ========== ENTRY ACCESS CONTROL ==========
+// // ========== ENTRY ACCESS CONTROL ==========
 
-function canAccessEntry(user, entryAssignedAgentId) {
-  if (!user) return false;
+// function canAccessEntry(user, entryAssignedAgentId) {
+//   if (!user) return false;
 
-  var role = user.role ? user.role.toString().trim() : '';
+//   var role = user.role ? user.role.toString().trim() : '';
 
-  // Super Admin and Admin can access all entries
-  if (role === 'Super Admin' || role === 'Admin') {
-    return true;
-  }
+//   // Super Admin and Admin can access all entries
+//   if (role === 'Super Admin' || role === 'Admin') {
+//     return true;
+//   }
 
-  // Sales Partner can ONLY access their own assigned leads
-  if (role === 'Sales Partner') {
-    return String(entryAssignedAgentId) === String(user.id);
-  }
+//   // Sales Partner can ONLY access their own assigned leads
+//   if (role === 'Sales Partner') {
+//     return String(entryAssignedAgentId) === String(user.id);
+//   }
 
-  // Lead Gen Specialist will be handled later
-  if (role === 'Lead Gen Specialist') {
-    return false;
-  }
+//   // Lead Gen Specialist will be handled later
+//   if (role === 'Lead Gen Specialist') {
+//     return false;
+//   }
 
-  return false;
-}
+//   return false;
+// }
 
 
 // ========== FIND ENTRY BY ID ==========
