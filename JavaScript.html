@@ -211,12 +211,13 @@ function handleLogout() {
   currentUser = null;
 
   // Hide all dashboard screens
-  var mainScreen = document.getElementById('agentScreen');
+  var agentScreen = document.getElementById('agentScreen');
   var adminScreen = document.getElementById('adminScreen');
   var superScreen = document.getElementById('superScreen');
+  var leadgenScreen = document.getElementById('leadgenScreen');
 
-  if (mainScreen) {
-    mainScreen.style.display = 'none';
+  if (agentScreen) {
+    agentScreen.style.display = 'none';
   }
 
   if (adminScreen) {
@@ -225,6 +226,10 @@ function handleLogout() {
 
   if (superScreen) {
     superScreen.style.display = 'none';
+  }
+
+  if (leadgenScreen) {
+    leadgenScreen.style.display = 'none';
   }
 
   // Clear ONLY password
