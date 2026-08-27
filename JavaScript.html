@@ -139,28 +139,27 @@ function updateClock() {
 function populateUser() {
   if (!currentUser) return;
 
-  var p = currentUser.name.split(' ').filter(Boolean),
-      ini = p.length > 1
-        ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
-        : (p[0] || '').substring(0, 2).toUpperCase();
+  var p = currentUser.name.split(' ').filter(Boolean);
+
+  var ini = p.length > 1
+    ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
+    : (p[0] || '').substring(0, 2).toUpperCase();
 
   document.getElementById('avatar').textContent = ini;
 
+  var role = (currentUser.role || '').trim();
+  var team = (currentUser.team || '').trim();
   var displayName = currentUser.name || '';
-  var role = currentUser.role || '';
-  var team = currentUser.team || '';
 
-  if (role === 'Sales Partner') {
-    displayName += ' • Sales Partner' + (team ? ' (' + team + ')' : '');
+  // Lead Gen Specialist only shows Name + Team
+  if (role === 'Lead Gen Specialist') {
+    displayName += team ? ' • ' + team : '';
+  }
 
-  } else if (role === 'Admin') {
-    displayName += ' • Admin' + (team ? ' (' + team + ')' : '');
-
-  } else if (role === 'Super Admin') {
-    displayName += ' • Super Admin' + (team ? ' (' + team + ')' : '');
-
-  } else if (role === 'Lead Gen Specialist') {
-    displayName += ' • ' + team;
+  // Sales Partner, Admin, Super Admin show Name + Role + Team
+  else {
+    displayName += role ? ' • ' + role : '';
+    displayName += team ? ' (' + team + ')' : '';
   }
 
   document.getElementById('userName').textContent = displayName;
