@@ -328,6 +328,17 @@ function handleUSPhoneInput(input) {
   input.setSelectionRange( formatted.length, formatted.length );
 }
 
+function handleEditPhoneInput(input) {
+  var formatted = formatUSPhoneNumber(input.value);
+
+  input.value = formatted;
+
+  input.setSelectionRange(
+    formatted.length,
+    formatted.length
+  );
+}
+
 function addPhoneField() {
   var c = document.getElementById('phoneNumbersContainer');
   var d = document.createElement('div');
