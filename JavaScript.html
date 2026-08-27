@@ -50,45 +50,59 @@ function showLeadgen() {
 }
 
 function routeUserByRole() {
+
   if (!currentUser || !currentUser.role) { console.error('No user role available.'); return; }
+
   var role = String(currentUser.role).trim();
+
   var loginScreen = document.getElementById('loginScreen');
   var agentScreen = document.getElementById('agentScreen');
   var leadgenScreen = document.getElementById('leadgenScreen');
 
-  // Hide everything first
   if (loginScreen) { loginScreen.style.display = 'none'; }
   if (agentScreen) { agentScreen.style.display = 'none'; }
   if (leadgenScreen) { leadgenScreen.style.display = 'none'; }
+
   if (role === 'Sales Partner') {
-    if (agentScreen) {
-      agentScreen.style.display = 'flex';
-      agentScreen.style.flexDirection = 'column';
-      agentScreen.style.height = '100vh';
-      agentScreen.style.width = '100vw'; }
+
     showAgent();
     return;
+
   }
+
   if (role === 'Lead Gen Specialist') {
-    if (leadgenScreen) {
-      leadgenScreen.style.display = 'flex';
-      leadgenScreen.style.flexDirection = 'column';
-      leadgenScreen.style.height = '100vh';
-      leadgenScreen.style.width = '100vw'; }
-    showLeadGen();
-    return; }
-  if ( role === 'Admin' || role === 'Super Admin' ) {
-    console.warn( 'Dashboard not available yet for role:', role );
+
+    showLeadgen();
+    return;
+
+  }
+
+  if (role === 'Admin' || role === 'Super Admin') {
+
+    console.warn('Dashboard not available yet for role:', role);
+
     if (loginScreen) { loginScreen.style.display = 'flex'; }
+
     var error = document.getElementById('loginError');
-    if (error) { error.textContent = role + ' dashboard is not available yet.';
-      error.style.display = 'block'; }
-    return; }
-  console.error( 'Unknown user role:', role );
+
+    if (error) {
+      error.textContent = role + ' dashboard is not available yet.';
+      error.style.display = 'block';
+    }
+
+    return;
+  }
+
+  console.error('Unknown user role:', role);
+
   if (loginScreen) { loginScreen.style.display = 'flex'; }
+
   var error = document.getElementById('loginError');
-  if (error) { error.textContent = 'Your account has an invalid or unsupported role.';
-    error.style.display = 'block'; }
+
+  if (error) {
+    error.textContent = 'Your account has an invalid or unsupported role.';
+    error.style.display = 'block';
+  }
 }
 
 var sessionCheckInterval = null;
@@ -131,9 +145,32 @@ function handleServerError(error, context) {
   if (error && error.message) { message = error.message; } showToast(message, 'error');
 }
 
-function updateClock() { 
-  var d = new Date(), el = document.getElementById('currentDate'); 
-  if (el) el.textContent = d.toLocaleString('en-US', { timeZone: currentTimeZone, weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' }); 
+function updateClock() {
+
+  var d = new Date();
+
+  var dateText = d.toLocaleString('en-US', {
+    timeZone: currentTimeZone,
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  var agentDate = document.getElementById('agentCurrentDate');
+
+  var leadgenDate = document.getElementById('leadgenCurrentDate');
+
+  if (agentDate) {
+    agentDate.textContent = dateText;
+  }
+
+  if (leadgenDate) {
+    leadgenDate.textContent = dateText;
+  }
+
 }
 
 function populateUser() {
