@@ -569,7 +569,6 @@ function openLeadgenEntryModal() {
     document.getElementById('leadgenEntryAuthorName').value = '';
     document.getElementById('leadgenEntryEmail').value = '';
     document.getElementById('leadgenEntryBook').value = '';
-    document.getElementById('leadgenEntryISBN').value = '';
     document.getElementById('leadgenEntryAddress').value = '';
 
     document.getElementById('leadgenPhoneNumbersContainer').innerHTML =
@@ -585,7 +584,10 @@ function openLeadgenEntryModal() {
   document.getElementById('leadgenEntryAuthorName').focus();
 }
 
-// ========== LEAD GEN ENTRY DRAFT ==========
+function closeLeadgenEntryModal() {
+  saveLeadgenEntryDraft();
+  document.getElementById('leadgenAddEntryModal').style.display = 'none';
+}
 
 function saveLeadgenEntryDraft() {
   var phones = [];
@@ -623,18 +625,14 @@ function clearLeadgenEntryDraft() {
   sessionStorage.removeItem(LEADGEN_ENTRY_DRAFT_KEY);
 }
 
-function closeLeadgenEntryModal() {
-  saveLeadgenEntryDraft();
-  document.getElementById('leadgenAddEntryModal').style.display = 'none';
-}
-
-// ========== LEAD GEN PHONE FIELDS ==========
-
 function handleLeadgenUSPhoneInput(input) {
   var formatted = formatUSPhoneNumber(input.value);
+
   input.value = formatted;
+
   saveLeadgenEntryDraft();
   updateLeadgenEntrySubmitButton();
+
   input.setSelectionRange(formatted.length, formatted.length);
 }
 
@@ -659,7 +657,6 @@ function removeLeadgenPhoneField(b) {
     b.parentElement.remove();
     updateLeadgenRemoveButtons();
     saveLeadgenEntryDraft();
-    updateLeadgenEntrySubmitButton();
   }
 }
 
@@ -670,18 +667,10 @@ function updateLeadgenRemoveButtons() {
 
   var rb = c.querySelectorAll('button');
 
-  if (rb.length <= 1) {
-    rb.forEach(function(b) {
-      b.style.display = 'none';
-    });
-  } else {
-    rb.forEach(function(b) {
-      b.style.display = 'inline-block';
-    });
-  }
+  rb.forEach(function(b) {
+    b.style.display = rb.length <= 1 ? 'none' : 'inline-block';
+  });
 }
-
-// ========== LEAD GEN SUBMIT BUTTON ==========
 
 function updateLeadgenEntrySubmitButton() {
   var an = document.getElementById('leadgenEntryAuthorName').value.trim();
@@ -701,7 +690,6 @@ function updateLeadgenEntrySubmitButton() {
   b.style.opacity = b.disabled ? '0.5' : '1';
 }
 
-// ========== LEAD GEN SUBMIT ==========
 function submitLeadgenEntry(e) {
   e.preventDefault();
 
@@ -736,6 +724,7 @@ function submitLeadgenEntry(e) {
       isSubmitting = false;
 
       if (r && r.success) {
+        clearLeadgenEntryDraft();
         showToast('Entry saved!', 'success');
         document.getElementById('leadgenAddEntryModal').style.display = 'none';
         loadEntries();
