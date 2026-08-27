@@ -535,40 +535,188 @@ function submitEntry(e) {
   .addEntry(SESSION_ID, { authorName: an, phones: ph.join(', '), email: em, book: bk, isbn: is, address: ad }); 
 }
 
+
 // ========== LEAD GEN ENTRY MODAL ==========
-
 function openLeadgenEntryModal() {
-
   document.getElementById('leadgenEntryAuthorName').value = '';
-
   document.getElementById('leadgenEntryEmail').value = '';
-
   document.getElementById('leadgenEntryBook').value = '';
-
   document.getElementById('leadgenEntryISBN').value = '';
-
   document.getElementById('leadgenEntryAddress').value = '';
 
   document.getElementById('leadgenPhoneNumbersContainer').innerHTML =
     '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
-      '<input type="text" class="leadgenEntryPhone" placeholder="+1 234 567 8900" style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;">' +
+      '<input type="text" class="leadgenEntryPhone" placeholder="+1 234 567 8900" style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;" oninput="handleUSPhoneInput(this)">' +
       '<button type="button" onclick="removeLeadgenPhoneField(this)" style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;display:none;">Remove</button>' +
     '</div>';
 
   document.getElementById('leadgenEntryError').style.display = 'none';
 
+  updateLeadgenEntrySubmitButton();
+
   document.getElementById('leadgenAddEntryModal').style.display = 'flex';
 
   document.getElementById('leadgenEntryAuthorName').focus();
 
+  updateLeadgenRemoveButtons();
 }
 
 function closeLeadgenEntryModal() {
-
   document.getElementById('leadgenAddEntryModal').style.display = 'none';
-
 }
 
+function addLeadgenPhoneField() {
+  var c = document.getElementById('leadgenPhoneNumbersContainer');
+
+  var d = document.createElement('div');
+
+  d.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+
+  d.innerHTML =
+    '<input type="text" class="leadgenEntryPhone" placeholder="+1 234 567 8900" style="flex:1;padding:11px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;" oninput="handleUSPhoneInput(this)">' +
+    '<button type="button" onclick="removeLeadgenPhoneField(this)" style="background:#fee;color:#d32f2f;border:1px solid #fcc;border-radius:6px;cursor:pointer;font-size:12px;padding:0 10px;">Remove</button>';
+
+  c.appendChild(d);
+
+  updateLeadgenRemoveButtons();
+}
+
+function removeLeadgenPhoneField(b) {
+  var c = document.getElementById('leadgenPhoneNumbersContainer');
+
+  if (c.children.length > 1) {
+    b.parentElement.remove();
+    updateLeadgenRemoveButtons();
+  }
+}
+
+function updateLeadgenRemoveButtons() {
+  var c = document.getElementById('leadgenPhoneNumbersContainer');
+
+  if (!c) return;
+
+  var rb = c.querySelectorAll('button');
+
+  if (rb.length <= 1) {
+    rb.forEach(function(b) {
+      b.style.display = 'none';
+    });
+  } else {
+    rb.forEach(function(b) {
+      b.style.display = 'inline-block';
+    });
+  }
+}
+
+function updateLeadgenEntrySubmitButton() {
+  var an = document.getElementById('leadgenEntryAuthorName').value.trim();
+
+  var bk = document.getElementById('leadgenEntryBook').value.trim();
+
+  var phones = document.querySelectorAll('.leadgenEntryPhone');
+
+  var hasPhone = false;
+
+  phones.forEach(function(input) {
+    if (input.value.trim()) {
+      hasPhone = true;
+    }
+  });
+
+  var b = document.getElementById('leadgenEntrySubmitBtn');
+
+  if (!b) return;
+
+  b.disabled = !(an && bk && hasPhone);
+
+  b.style.opacity = b.disabled ? '0.5' : '1';
+}
+
+function submitLeadgenEntry(e) {
+  e.preventDefault();
+
+  if (isSubmitting) return;
+
+  isSubmitting = true;
+
+  var an = document.getElementById('leadgenEntryAuthorName').value.trim();
+
+  var bk = document.getElementById('leadgenEntryBook').value.trim();
+
+  var em = document.getElementById('leadgenEntryEmail').value.trim();
+
+  var is = document.getElementById('leadgenEntryISBN').value.trim();
+
+  var ad = document.getElementById('leadgenEntryAddress').value.trim();
+
+  var pi = document.querySelectorAll('.leadgenEntryPhone');
+
+  var ph = [];
+
+  pi.forEach(function(i) {
+    var v = i.value.trim();
+
+    if (v) {
+      ph.push(v);
+    }
+  });
+
+  var er = document.getElementById('leadgenEntryError');
+
+  er.style.display = 'none';
+
+  if (!an || !bk || ph.length === 0) {
+    er.textContent = 'Author Name, Phone Number, and Book Title are required.';
+
+    er.style.display = 'block';
+
+    isSubmitting = false;
+
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+
+      isSubmitting = false;
+
+      if (r && r.success) {
+
+        showToast('Entry saved!', 'success');
+
+        document.getElementById('leadgenAddEntryModal').style.display = 'none';
+
+        loadEntries();
+
+      } else {
+
+        er.textContent = (r && r.message) || 'Unable to save entry.';
+
+        er.style.display = 'block';
+
+      }
+
+    })
+    .withFailureHandler(function(error) {
+
+      isSubmitting = false;
+
+      er.textContent = 'Unable to save entry. Please try again.';
+
+      er.style.display = 'block';
+
+      handleServerError(error, 'addLeadgenEntry');
+
+    })
+    .addEntry(SESSION_ID, {
+      authorName: an,
+      phones: ph.join(', '),
+      email: em,
+      book: bk,
+      isbn: is,
+      address: ad
+    });
+}
 
 // ========== TABLE ==========
 var allEntries = []; 
