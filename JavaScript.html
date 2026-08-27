@@ -174,6 +174,7 @@ function updateClock() {
 }
 
 function populateUser() {
+
   if (!currentUser) return;
 
   var p = currentUser.name.split(' ').filter(Boolean);
@@ -182,27 +183,66 @@ function populateUser() {
     ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
     : (p[0] || '').substring(0, 2).toUpperCase();
 
-  document.getElementById('avatar').textContent = ini;
-
   var role = (currentUser.role || '').trim();
+
   var team = (currentUser.team || '').trim();
+
   var displayName = currentUser.name || '';
 
   // Lead Gen Specialist only shows Name + Team
+
   if (role === 'Lead Gen Specialist') {
+
     displayName += team ? ' • ' + team : '';
+
+    var leadgenAvatar = document.getElementById('leadgenAvatar');
+
+    var leadgenUserName = document.getElementById('leadgenUserName');
+
+    var leadgenUserEmail = document.getElementById('leadgenUserEmail');
+
+    if (leadgenAvatar) {
+      leadgenAvatar.textContent = ini;
+    }
+
+    if (leadgenUserName) {
+      leadgenUserName.textContent = displayName;
+    }
+
+    if (leadgenUserEmail) {
+      leadgenUserEmail.textContent = currentUser.email || '';
+    }
+
   }
 
-  // Sales Partner, Admin, Super Admin show Name + Role + Team
+  // Sales Partner, Admin, Super Admin
+
   else {
+
     displayName += role ? ' • ' + role : '';
+
     displayName += team ? ' (' + team + ')' : '';
+
+    var agentAvatar = document.getElementById('agentAvatar');
+
+    var agentUserName = document.getElementById('agentUserName');
+
+    var agentUserEmail = document.getElementById('agentUserEmail');
+
+    if (agentAvatar) {
+      agentAvatar.textContent = ini;
+    }
+
+    if (agentUserName) {
+      agentUserName.textContent = displayName;
+    }
+
+    if (agentUserEmail) {
+      agentUserEmail.textContent = currentUser.email || '';
+    }
+
   }
 
-  document.getElementById('userName').textContent = displayName;
-
-  document.getElementById('userEmail').textContent =
-    currentUser.email || '';
 }
 
 function handleLogin(e) {
