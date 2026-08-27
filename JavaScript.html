@@ -566,9 +566,7 @@ function openLeadgenEntryModal() {
     });
 
     updateLeadgenRemoveButtons();
-
   } else {
-
     document.getElementById('leadgenEntryAuthorName').value = '';
     document.getElementById('leadgenEntryEmail').value = '';
     document.getElementById('leadgenEntryBook').value = '';
@@ -583,27 +581,7 @@ function openLeadgenEntryModal() {
   }
 
   document.getElementById('leadgenEntryError').style.display = 'none';
-
-  // =====================================================
-  // FIX: Update button whenever required fields change
-  // =====================================================
-
-  document.getElementById('leadgenEntryAuthorName')
-    .addEventListener('input', updateLeadgenEntrySubmitButton);
-
-  document.getElementById('leadgenEntryBook')
-    .addEventListener('input', updateLeadgenEntrySubmitButton);
-
-  document.getElementById('leadgenEntryISBN')
-    .addEventListener('input', updateLeadgenEntrySubmitButton);
-
-  document.querySelectorAll('.leadgenEntryPhone').forEach(function(input) {
-    input.addEventListener('input', updateLeadgenEntrySubmitButton);
-  });
-
-  // Initial state
   updateLeadgenEntrySubmitButton();
-
   document.getElementById('leadgenAddEntryModal').style.display = 'flex';
   document.getElementById('leadgenEntryAuthorName').focus();
 }
