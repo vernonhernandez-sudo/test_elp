@@ -563,6 +563,7 @@ function selectEntry(entryId) {
   updateStatusBadge(selectedEntryData.status);
   updateStatusDropdownPermissions(selectedEntryData);
   updateTransferPendingPermissions(selectedEntryData);
+  updateExtendButton(selectedEntryData);
   updateWrongNumberButton(selectedEntryData);
   showingAllActivity = false; 
   document.getElementById('toggleActivityBtn').textContent = 'Show All Activity'; 
@@ -1089,6 +1090,297 @@ function submitTransferRequest() {
       selectedEntryId,
       targetAgentId,
       reason
+    );
+}
+
+// ========== EXTEND BUTTON VISIBILITY ==========
+
+function updateExtendButton(entry) {
+
+  var extendBtn =
+    document.getElementById('extendBtn');
+
+  if (!extendBtn || !entry) {
+    return;
+  }
+
+  var status =
+    entry.originalStatus !== undefined
+      ? entry.originalStatus
+      : entry.status;
+
+  // ==========================================
+  // ONLY ALLOW:
+  //
+  // No Status
+  // Pipe
+  // VM
+  // ==========================================
+
+  var canExtend =
+    status === '' ||
+    status === 'Pipe' ||
+    status === 'VM';
+
+  // ==========================================
+  // DO NOT ALLOW WHILE TRANSFER IS PENDING
+  // ==========================================
+
+  if (entry.transferPending === true) {
+    canExtend = false;
+  }
+
+  if (canExtend) {
+
+    extendBtn.style.display =
+      'inline-block';
+
+    extendBtn.disabled =
+      false;
+
+    extendBtn.style.opacity =
+      '1';
+
+    extendBtn.style.cursor =
+      'pointer';
+
+  } else {
+
+    extendBtn.style.display =
+      'none';
+
+    extendBtn.disabled =
+      true;
+
+    extendBtn.style.opacity =
+      '0.5';
+
+    extendBtn.style.cursor =
+      'not-allowed';
+  }
+}
+
+// ========== OPEN EXTEND MODAL ==========
+
+function openExtendModal() {
+
+  if (!selectedEntryData) {
+    return;
+  }
+
+  // Safety check
+  if (
+    selectedEntryData.transferPending === true
+  ) {
+    return;
+  }
+
+  var status =
+    selectedEntryData.originalStatus !== undefined
+      ? selectedEntryData.originalStatus
+      : selectedEntryData.status;
+
+  var allowedStatuses = [
+    '',
+    'Pipe',
+    'VM'
+  ];
+
+  if (
+    allowedStatuses.indexOf(status) === -1
+  ) {
+    return;
+  }
+
+  var modal =
+    document.getElementById(
+      'extendGraceModal'
+    );
+
+  var leadInfo =
+    document.getElementById(
+      'extendGraceLeadInfo'
+    );
+
+  var error =
+    document.getElementById(
+      'extendGraceError'
+    );
+
+  if (error) {
+    error.style.display = 'none';
+    error.textContent = '';
+  }
+
+  if (leadInfo) {
+
+    var statusLabel =
+      status === ''
+        ? 'No Status'
+        : status;
+
+    leadInfo.innerHTML =
+      '<strong>' +
+      escapeHtml(
+        selectedEntryData.authorName || '-'
+      ) +
+      '</strong><br>' +
+
+      '<span style="color:#888;">' +
+      escapeHtml(
+        selectedEntryData.book || '-'
+      ) +
+      '</span><br><br>' +
+
+      'Current Status: <strong>' +
+      escapeHtml(statusLabel) +
+      '</strong>';
+  }
+
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+
+// ========== CLOSE EXTEND MODAL ==========
+
+function closeExtendModal() {
+
+  var modal =
+    document.getElementById(
+      'extendGraceModal'
+    );
+
+  if (modal) {
+    modal.style.display = 'none';
+  }
+
+  var error =
+    document.getElementById(
+      'extendGraceError'
+    );
+
+  if (error) {
+    error.style.display = 'none';
+    error.textContent = '';
+  }
+}
+
+// ========== CONFIRM EXTEND GRACE PERIOD ==========
+
+function confirmExtendGracePeriod() {
+
+  if (
+    !selectedEntryId ||
+    !selectedEntryData
+  ) {
+    return;
+  }
+
+  if (
+    selectedEntryData.transferPending === true
+  ) {
+    return;
+  }
+
+  var confirmBtn =
+    document.getElementById(
+      'confirmExtendBtn'
+    );
+
+  var error =
+    document.getElementById(
+      'extendGraceError'
+    );
+
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.6';
+    confirmBtn.style.cursor = 'not-allowed';
+  }
+
+  if (error) {
+    error.style.display = 'none';
+    error.textContent = '';
+  }
+
+  google.script.run
+
+    .withSuccessHandler(function(result) {
+
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        confirmBtn.style.cursor = 'pointer';
+      }
+
+      if (!result || !result.success) {
+
+        if (error) {
+
+          error.textContent =
+            (result && result.message)
+              ? result.message
+              : 'Unable to extend the grace period.';
+
+          error.style.display =
+            'block';
+        }
+
+        return;
+      }
+
+      closeExtendModal();
+
+      showToast(
+        'Grace period successfully extended.',
+        'success'
+      );
+
+      // Reload entries so frontend gets
+      // the updated StatusStartedAt state.
+      loadEntries(function() {
+
+        if (!selectedEntryId) {
+          return;
+        }
+
+        selectEntry(
+          selectedEntryId
+        );
+
+      });
+
+    })
+
+    .withFailureHandler(function(err) {
+
+      console.error(
+        'extendLeadGracePeriod failed:',
+        err
+      );
+
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        confirmBtn.style.cursor = 'pointer';
+      }
+
+      if (error) {
+
+        error.textContent =
+          'Unable to extend the grace period. Please try again.';
+
+        error.style.display =
+          'block';
+      }
+
+    })
+
+    .extendLeadGracePeriod(
+      SESSION_ID,
+      selectedEntryId
     );
 }
 
