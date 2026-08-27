@@ -1437,26 +1437,6 @@ function getPendingTransferForEntry(sessionId, entryId) {
      */
     data.shift();
 
-    /*
-     * TransferRequests columns:
-     *
-     * [0] RequestID
-     * [1] EntryID
-     * [2] FromAgentID
-     * [3] FromAgentName
-     * [4] ToAgentID
-     * [5] ToAgentName
-     * [6] RequestedByID
-     * [7] RequestedByName
-     * [8] RequestedAt
-     * [9] Status
-     * [10] ReviewedByID
-     * [11] ReviewedByName
-     * [12] ReviewedAt
-     * [13] Reason
-     * [14] ReviewNote
-     */
-
     for (var i = 0; i < data.length; i++) {
 
       var row = data[i];
@@ -1531,7 +1511,6 @@ function getPendingTransferForEntry(sessionId, entryId) {
 }
 
 // ========== PHONE NUMBER FORMATTING ==========
-
 function formatUSPhoneNumber(phone) {
 
   if (!phone) return '';
