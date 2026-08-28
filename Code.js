@@ -241,9 +241,7 @@ function isShiftRestrictedRole(role) {
          role === 'Lead Gen Specialist';
 }
 
-/**
- * Login
- */
+// Login
 function loginUser(email, password) {
 
   if (!email || !password) {
@@ -1677,7 +1675,6 @@ if (isDuplicateLead(d, entryData, entryId)) {
 // }
 
 // ========== ENTRY ACCESS CONTROL ==========
-
 function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
 
   if (!user) return false;
@@ -1737,8 +1734,12 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
    */
 
   if (role === 'Lead Gen Specialist') {
-    return false;
-  }
+
+  var isMinedByUser =
+    String(entryMinedById) === String(user.id);
+
+  return isMinedByUser;
+}
 
   return false;
 }
