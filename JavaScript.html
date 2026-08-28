@@ -331,6 +331,29 @@ function showToast(message, type) {
   toast._timeout = setTimeout(function() { toast.style.display = 'none'; }, 5000); 
 }
 
+function showLeadgenToast(message, type) {
+
+  var toast = document.getElementById('leadgenToast');
+
+  if (!toast) {
+    console.error('Lead Gen toast element not found.');
+    return;
+  }
+
+  toast.textContent = message;
+
+  toast.className = 'toast ' + (type || 'success');
+
+  toast.style.display = 'block';
+
+  clearTimeout(toast._timeout);
+
+  toast._timeout = setTimeout(function() {
+    toast.style.display = 'none';
+  }, 5000);
+
+}
+
 function showConfirm(title, message, onConfirm, confirmColor) { 
   document.getElementById('confirmTitle').textContent = title || 'Confirm'; 
   document.getElementById('confirmMessage').innerHTML = message || 'Are you sure?'; 
@@ -520,10 +543,18 @@ function submitEntry(e) {
   var er = document.getElementById('entryError'); 
   er.style.display = 'none'; 
   if (!an || !bk || !is) { er.textContent = 'Author Name, Book, and ISBN are required.'; er.style.display = 'block'; isSubmitting = false; return; } 
-  google.script.run .withSuccessHandler(function(r) { isSubmitting = false;
-    if (r && r.success) { clearEntryDraft();
+
+  google.script.run 
+  .withSuccessHandler(function(r) { 
+    isSubmitting = false;
+
+    if (r && r.success) { 
+      clearEntryDraft();
+
   showToast( 'Entry saved!', 'success' );
+
   document.getElementById('addEntryModal').style.display = 'none';
+
   loadEntries();
     } else {
       er.textContent = (r && r.message) || 'Unable to save entry.';
@@ -795,7 +826,7 @@ function submitLeadgenEntry(e) {
 
         document.getElementById('leadgenAddEntryModal').style.display = 'none';
 
-        showToast('Entry saved successfully!', 'success');
+        showLeadgenToast('Entry saved successfully!', 'success');
 
         loadEntries();
       } else {
@@ -810,6 +841,8 @@ function submitLeadgenEntry(e) {
         er.style.display = 'block';
       }
     })
+
+    
     .withFailureHandler(function(error) {
       isSubmitting = false;
 
