@@ -1708,8 +1708,6 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
    * 1. Leads assigned to them
    * 2. Leads they personally mined
    *
-   * This is important because Sales Partner-created
-   * entries have no Assigned Agent yet.
    * =====================================================
    */
 
@@ -1728,8 +1726,10 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
    * =====================================================
    * LEAD GEN SPECIALIST
    *
-   * Will be handled separately when we implement
-   * Lead Gen Specialist access/distribution.
+   * Can see every lead they personally mined/touched,
+   * regardless of the current status.
+   *
+   * Wrong Number is also included.
    * =====================================================
    */
 
@@ -1739,9 +1739,6 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
     String(entryMinedById) === String(user.id);
 
   return isMinedByUser;
-}
-
-  return false;
 }
 
 // ========== GET ENTRIES ==========
@@ -1874,9 +1871,12 @@ function getEntries(sessionId) {
           ? ed[i][8].toString().trim()
           : '';
 
-      if (entryStatus === 'Wrong Number') {
-        continue;
-      }
+      if (
+  entryStatus === 'Wrong Number' &&
+  u.role !== 'Lead Gen Specialist'
+) {
+  continue;
+}
 
       // ========================================
       // ORIGINAL STATUS
