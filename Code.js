@@ -1657,24 +1657,6 @@ if (isDuplicateLead(d, entryData, entryId)) {
   }
 }
 
-// function deleteEntry(sessionId, entryId) {
-//   try {
-//     var u=getUserFromCache(sessionId); 
-//     if(!u)return{success:false,message:'Session expired.'};
-//     var s=SpreadsheetApp.openById(SHEET_ID).getSheetByName('Entries'); 
-//     var d=s.getDataRange().getValues();
-//     for(var k=d.length-1;k>=1;k--){
-//       if(d[k][0]==entryId){
-//         s.deleteRow(k+1);
-//         logActivity(u.id,u.name,'Deleted entry #'+entryId);
-//         return{success:true,message:'Entry deleted.'};
-//       }
-//     }
-//     return{success:false,message:'Not found.'};
-//   } catch(e){return{success:false,message:'Error: '+e.toString()};}
-// }
-
-// ========== ENTRY ACCESS CONTROL ==========
 function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
 
   if (!user) return false;
@@ -1684,14 +1666,7 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
       ? user.role.toString().trim()
       : '';
 
-  /*
-   * =====================================================
-   * SUPER ADMIN / ADMIN
-   *
-   * Can see every entry.
-   * =====================================================
-   */
-
+ 
   if (
     role === 'Super Admin' ||
     role === 'Admin'
@@ -1699,19 +1674,7 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
     return true;
   }
 
-  /*
-   * =====================================================
-   * SALES PARTNER
-   *
-   * Can see:
-   *
-   * 1. Leads assigned to them
-   * 2. Leads they personally mined
-   *
-   * This is important because Sales Partner-created
-   * entries have no Assigned Agent yet.
-   * =====================================================
-   */
+
 
   if (role === 'Sales Partner') {
 
@@ -1724,14 +1687,7 @@ function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
     return isAssignedToUser || isMinedByUser;
   }
 
-  /*
-   * =====================================================
-   * LEAD GEN SPECIALIST
-   *
-   * Will be handled separately when we implement
-   * Lead Gen Specialist access/distribution.
-   * =====================================================
-   */
+  
 
   if (role === 'Lead Gen Specialist') {
     return false;
