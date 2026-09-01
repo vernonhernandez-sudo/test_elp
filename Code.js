@@ -1590,71 +1590,184 @@ function updateEntry(sessionId, entryId, entryData) {
     }
 
     var d = s.getDataRange().getValues();
+  var previousData = null;
+
+  for (var i = 1; i < d.length; i++) {
+    if (String(d[i][0]).trim() === String(entryId).trim()) {
+      previousData = {
+        id: d[i][0],
+        authorName: d[i][1] || '',
+        phones: d[i][2] || '',
+        email: d[i][3] || '',
+        book: d[i][4] || '',
+        isbn: d[i][5] || '',
+        address: d[i][6] || ''
+      };
+      break;
+    }
+  }
 
 // ==========================================
 // DUPLICATE LEAD CHECK
 // Ignore the entry currently being edited.
 // ==========================================
-
+ 
 if (isDuplicateLead(d, entryData, entryId)) {
-  return {
-    success: false,
-    code: 'DUPLICATE_LEAD',
-    message: 'The Leads You Entered Already Exist in the Database'
-  };
+return {
+  success: false,
+  code: 'DUPLICATE_LEAD',
+  message: 'The Leads You Entered Already Exist in the Database'
+};
 }
 
-    for (var i = 1; i < d.length; i++) {
+  for (var i = 1; i < d.length; i++) {
 
-      if (d[i][0] == entryId) {
+    if (d[i][0] == entryId) {
 
-        s.getRange(i + 1, 2).setValue(entryData.authorName || '');
-        s.getRange(i + 1, 3).setValue(entryData.phones || '');
-        s.getRange(i + 1, 4).setValue(entryData.email || '');
-        s.getRange(i + 1, 5).setValue(entryData.book || '');
-        s.getRange(i + 1, 6).setValue(entryData.isbn || '');
-        s.getRange(i + 1, 7).setValue(entryData.address || '');
+      s.getRange(i + 1, 2).setValue(entryData.authorName || '');
+      s.getRange(i + 1, 3).setValue(entryData.phones || '');
+      s.getRange(i + 1, 4).setValue(entryData.email || '');
+      s.getRange(i + 1, 5).setValue(entryData.book || '');
+      s.getRange(i + 1, 6).setValue(entryData.isbn || '');
+      s.getRange(i + 1, 7).setValue(entryData.address || '');
 
-        SpreadsheetApp.flush();
+      SpreadsheetApp.flush();
 
-        logActivity(
-          u.id,
-          u.name,
-          'Updated entry #' + entryId
-        );
+      var updateMessage = 'Updated entry #' + entryId;
 
-        return {
-          success: true,
-          message: 'Updated!'
+      if (previousData) {
+        var fieldConfigs = {
+          authorName: {
+            title: 'Author',
+            fieldName: 'Author Name'
+          },
+          phones: {
+            title: 'Phone',
+            fieldName: 'Phone'
+          },
+          email: {
+            title: 'Email',
+            fieldName: 'Email'
+          },
+          book: {
+            title: 'Book',
+            fieldName: 'Book'
+          },
+          isbn: {
+            title: 'ISBN',
+            fieldName: 'ISBN'
+          },
+          address: {
+            title: 'Address',
+            fieldName: 'Address'
+          }
         };
+        var changedFields = [];
+
+        Object.keys(fieldConfigs).forEach(function(key) {
+
+          var config = fieldConfigs[key];
+
+          var oldValue =
+            previousData[key] == null
+              ? ''
+              : String(previousData[key]).trim();
+
+          var newValue =
+            entryData[key] == null
+              ? ''
+              : String(entryData[key]).trim();
+
+          /*
+          * =====================================================
+          * FIELD CHANGED
+          * =====================================================
+          */
+
+          if (oldValue !== newValue) {
+
+            /*
+            * EXISTING ACTIVITY MESSAGE
+            *
+            * We keep this so your current Activity Log
+            * behavior remains unchanged.
+            */
+
+            changedFields.push(
+              'Updated ' +
+              config.title +
+              ': ' +
+              config.fieldName +
+              ' = "' +
+              oldValue +
+              '" to "' +
+              newValue +
+              '"'
+            );
+
+            /*
+            * =================================================
+            * NEW STRUCTURED EDIT TRACKING
+            * =================================================
+            */
+
+            logEntryEdit(
+              u.id,
+              u.name,
+              entryId,
+              config.fieldName,
+              oldValue,
+              newValue
+            );
+
+          }
+
+        });
+
+        if (changedFields.length > 0) {
+          updateMessage = changedFields.join(' | ');
+        }
       }
+
+      logActivity(
+        u.id,
+        u.name,
+        updateMessage
+      );
+
+      return {
+        success: true,
+        message: 'Updated!'
+      };
     }
-
-    return {
-      success: false,
-      message: 'Entry not found.',
-      code: 'ENTRY_NOT_FOUND'
-    };
-
-  } catch (e) {
-
-    // Detailed error is visible in Apps Script execution logs,
-    // but is NOT exposed to the user.
-    console.error(
-      'updateEntry failed. Entry ID: ' +
-      entryId +
-      ' | Error: ' +
-      e.message +
-      ' | Stack: ' +
-      e.stack
-    );
-
-    return {
-      success: false,
-      message: 'Unable to update the entry right now. Please try again.',
-      code: 'UPDATE_FAILED'
-    };
   }
+
+  return {
+    success: false,
+    message: 'Entry not found.',
+    code: 'ENTRY_NOT_FOUND'
+  };
+
+} catch (e) {
+
+  // Detailed error is visible in Apps Script execution logs,
+  // but is NOT exposed to the user.
+  console.error(
+    'updateEntry failed. Entry ID: ' +
+    entryId +
+    ' | Error: ' +
+    e.message +
+    ' | Stack: ' +
+    e.stack
+  );
+
+  return {
+    success: false,
+    message: 'Unable to update the entry right now. Please try again.',
+    code: 'UPDATE_FAILED'
+  };
+
+}
 }
 
 function canAccessEntry(user, entryAssignedAgentId, entryMinedById) {
@@ -2855,269 +2968,221 @@ function expireAndRedistributeLead(entryId) {
 
 // ========== REMARKS ==========
 function addRemark(sessionId, entryId, remarkText) {
-  try { 
-    var u=getUserFromCache(sessionId); 
-    if(!u||!remarkText||!remarkText.trim())return{success:false,message:'Invalid.'}; 
-    var s=SpreadsheetApp.openById(SHEET_ID).getSheetByName('Remarks'); 
-    s.appendRow([s.getDataRange().getValues().length,entryId,new Date().toISOString(),u.id,u.name,remarkText.trim()]); 
-    logActivity(u.id,u.name,'Added remark to #'+entryId); 
-    return{success:true,message:'Remark added!'}; 
-  } catch(e){return{success:false,message:'Error'};}
+  try {
+    var u = getUserFromCache(sessionId);
+    if (!u) { return { success: false, message: 'Session expired. Please sign in again.' }; }
+    if (!entryId || !remarkText || !remarkText.trim()) { return { success: false, message: 'Invalid remark.' }; }
+    var entrySheet = SpreadsheetApp .openById(SHEET_ID) .getSheetByName('Entries');
+    if (!entrySheet) { return { success: false, message: 'Entries sheet not found.' }; }
+    var entries = entrySheet.getDataRange().getValues();
+    var currentStatus = '';
+    for (var i = 1; i < entries.length; i++) { if (String(entries[i][0]).trim() === String(entryId).trim()) { currentStatus = entries[i][8] ? entries[i][8].toString().trim() : ''; break; } }
+    if (String(currentStatus).trim() === 'Pending') { return { success: false, message: 'This lead is pending transfer approval and cannot receive remarks.' }; }
+    var pendingCheck = getPendingTransferForEntry(sessionId, entryId);
+    if (pendingCheck && pendingCheck.pending === true) { return { success: false, message: 'This lead is pending transfer approval and cannot receive remarks.' }; }
+    var s = SpreadsheetApp .openById(SHEET_ID) .getSheetByName('Remarks');
+    if (!s) { return { success: false, message: 'Remarks sheet not found.' }; }
+    s.appendRow([ s.getDataRange().getValues().length, entryId, new Date().toISOString(), u.id, u.name, remarkText.trim() ]);
+    logActivity(u.id, u.name, 'Added remark to #' + entryId);
+    return { success: true, message: 'Remark added!' };
+  } catch (e) {
+    console.error('addRemark failed. Entry ID: ' + entryId + ' | Error: ' + e.message + ' | Stack: ' + e.stack); return { success: false, message: 'Error' };
+  }
 }
 
 // ========== GET REMARKS ==========
-
 function getRemarks(sessionId, entryId) {
-
   try {
-
-    // Verify that the user is logged in
     var u = getUserFromCache(sessionId);
-
     if (!u) {
       return [];
     }
-
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sheet = ss.getSheetByName('Remarks');
-
-    if (!sheet) {
-      console.error('getRemarks: Remarks sheet not found.');
-      return [];
-    }
-
+    if (!sheet) { console.error('getRemarks: Remarks sheet not found.'); return []; }
     var data = sheet.getDataRange().getValues();
-
-    if (data.length <= 1) {
-      return [];
-    }
-
-    // Remove header row
+    if (data.length <= 1) { return []; }
     data.shift();
-
     var remarks = [];
-
     for (var i = 0; i < data.length; i++) {
-
-      /*
-       * IMPORTANT:
-       *
-       * Remarks belong to the Entry ID.
-       *
-       * We do NOT check the current assigned
-       * Sales Partner here.
-       *
-       * Therefore, if a lead is transferred from
-       * one Sales Partner to another, ALL previous
-       * remarks remain visible.
-       */
-
       if (String(data[i][1]) === String(entryId)) {
-
-        remarks.push({
-
-          id: data[i][0],
-
-          entryId: data[i][1],
-
-          timestamp: data[i][2],
-
-          userId: data[i][3],
-
-          userName: data[i][4],
-
-          remark: data[i][5]
-
-        });
-
+        remarks.push({ id: data[i][0], entryId: data[i][1], timestamp: data[i][2], userId: data[i][3], userName: data[i][4], remark: data[i][5] });
       }
-
     }
-
-    // Newest remark first
-    remarks.sort(function(a, b) {
-
-      return new Date(b.timestamp) -
-             new Date(a.timestamp);
-
-    });
-
+    remarks.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
     return remarks;
-
   } catch (e) {
-
-    console.error(
-      'getRemarks failed. Entry ID: ' +
-      entryId +
-      ' | Error: ' +
-      e.message
-    );
-
+    console.error( 'getRemarks failed. Entry ID: ' + entryId + ' | Error: ' + e.message );
     return [];
-
   }
-
 }
 
+// // ========== GET ENTRY ACTIVITY ==========
+// function getEntryActivity(sessionId, entryId) {
+
+//   try {
+
+//     var u = getUserFromCache(sessionId);
+
+//     if (!u) {
+//       return [];
+//     }
+
+//     var ss = SpreadsheetApp.openById(SHEET_ID);
+
+//     var remarksSheet =
+//       ss.getSheetByName('Remarks');
+
+//     var activitySheet =
+//       ss.getSheetByName('ActivityLog');
+
+//     if (!remarksSheet || !activitySheet) {
+
+//       console.error(
+//         'getEntryActivity: Required sheet not found.'
+//       );
+
+//       return [];
+//     }
+
+//     var remarksData =
+//       remarksSheet.getDataRange().getValues();
+
+//     var activityData =
+//       activitySheet.getDataRange().getValues();
+
+//     /*
+//      * Remove header rows.
+//      */
+
+//     if (remarksData.length > 0) {
+//       remarksData.shift();
+//     }
+
+//     if (activityData.length > 0) {
+//       activityData.shift();
+//     }
+
+//     var items = [];
+
+//     for (var i = 0; i < remarksData.length; i++) {
+
+//       if (
+//         String(remarksData[i][1]) ===
+//         String(entryId)
+//       ) {
+
+//         items.push({
+
+//           type: 'remark',
+
+//           timestamp: remarksData[i][2],
+
+//           userName: remarksData[i][4],
+
+//           content: remarksData[i][5]
+
+//         });
+
+//       }
+
+//     }
+
+//     for (var j = 0; j < activityData.length; j++) {
+
+//       var action =
+//         activityData[j][3]
+//           ? activityData[j][3].toString()
+//           : '';
+
+//       if (
+//         action.indexOf(
+//           '#' + entryId
+//         ) > -1
+//       ) {
+
+//         items.push({
+
+//           type: 'activity',
+
+//           timestamp: activityData[j][4],
+
+//           userName: activityData[j][2],
+
+//           content: action
+
+//         });
+
+//       }
+
+//     }
+
+//     /*
+//      * ==========================================
+//      * NEWEST FIRST
+//      * ==========================================
+//      */
+
+//     items.sort(function(a, b) {
+
+//       return new Date(b.timestamp) -
+//              new Date(a.timestamp);
+
+//     });
+//     return items.slice(0, 50);
+//   } catch (e) {
+//     console.error( 'getEntryActivity failed. Entry ID: ' + entryId + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); return []; }
+// }
+
 // ========== GET ENTRY ACTIVITY ==========
-
 function getEntryActivity(sessionId, entryId) {
-
   try {
-
-    /*
-     * ==========================================
-     * VERIFY LOGIN SESSION
-     * ==========================================
-     */
-
     var u = getUserFromCache(sessionId);
-
-    if (!u) {
-      return [];
-    }
-
+    if (!u) { return []; }
     var ss = SpreadsheetApp.openById(SHEET_ID);
-
-    var remarksSheet =
-      ss.getSheetByName('Remarks');
-
-    var activitySheet =
-      ss.getSheetByName('ActivityLog');
-
+    var remarksSheet = ss.getSheetByName('Remarks');
+    var activitySheet = ss.getSheetByName('ActivityLog');
     if (!remarksSheet || !activitySheet) {
-
-      console.error(
-        'getEntryActivity: Required sheet not found.'
-      );
-
+      console.error( 'getEntryActivity: Required sheet not found.' );
       return [];
     }
-
-    var remarksData =
-      remarksSheet.getDataRange().getValues();
-
-    var activityData =
-      activitySheet.getDataRange().getValues();
-
-    /*
-     * Remove header rows.
-     */
-
-    if (remarksData.length > 0) {
-      remarksData.shift();
-    }
-
-    if (activityData.length > 0) {
-      activityData.shift();
-    }
-
+    var remarksData = remarksSheet.getDataRange().getValues();
+    var activityData = activitySheet.getDataRange().getValues();
+    if (remarksData.length > 0) { remarksData.shift(); }
+    if (activityData.length > 0) { activityData.shift(); }
     var items = [];
-
-    /*
-     * ==========================================
-     * GET ALL REMARKS FOR THIS ENTRY
-     * ==========================================
-     *
-     * IMPORTANT:
-     *
-     * We only check Entry ID.
-     *
-     * We do NOT check:
-     *
-     * - Current assigned Sales Partner
-     * - Who currently owns the lead
-     * - Who mined the lead
-     *
-     * Therefore all historical remarks remain
-     * attached to this Entry.
-     */
-
     for (var i = 0; i < remarksData.length; i++) {
-
       if (
         String(remarksData[i][1]) ===
         String(entryId)
       ) {
-
-        items.push({
-
-          type: 'remark',
-
-          timestamp: remarksData[i][2],
-
-          userName: remarksData[i][4],
-
-          content: remarksData[i][5]
-
-        });
-
+        items.push({ type: 'remark', timestamp: remarksData[i][2], userName: remarksData[i][4], content: remarksData[i][5] });
       }
-
     }
-
-    /*
-     * ==========================================
-     * GET ALL ACTIVITY FOR THIS ENTRY
-     * ==========================================
-     *
-     * Your current ActivityLog stores the
-     * Entry ID inside the Action text.
-     *
-     * Example:
-     *
-     * "Status #123 to Pipe"
-     *
-     * "Added remark to #123"
-     *
-     * Until we redesign the ActivityLog columns,
-     * we will continue using this method.
-     */
-
     for (var j = 0; j < activityData.length; j++) {
-
-      var action =
-        activityData[j][3]
-          ? activityData[j][3].toString()
-          : '';
-
+      var action = activityData[j][3] ? activityData[j][3].toString() : '';
+      var loggedEntryId = activityData[j][5] != null ? String(activityData[j][5]).trim() : '';
+      var field = activityData[j][6] != null ? String(activityData[j][6]).trim() : '';
+      var oldValue = activityData[j][7] != null ? String(activityData[j][7]) : '';
+      var newValue = activityData[j][8] != null ? String(activityData[j][8]) : '';
       if (
-        action.indexOf(
-          '#' + entryId
-        ) > -1
+        action === 'EDIT' &&
+        loggedEntryId === String(entryId).trim()
       ) {
-
-        items.push({
-
-          type: 'activity',
-
-          timestamp: activityData[j][4],
-
-          userName: activityData[j][2],
-
-          content: action
-
-        });
-
+        items.push({ type: 'edit', timestamp: activityData[j][4], userName: activityData[j][2], content: field + ' changed: "' + oldValue + '" → "' + newValue + '"', field: field, oldValue: oldValue, newValue: newValue });
+        continue;
       }
-
+      if ( action.indexOf( '#' + entryId ) > -1
+      ) {
+        items.push({ type: 'activity', timestamp: activityData[j][4], userName: activityData[j][2], content: action });
+      }
     }
-
-    /*
-     * ==========================================
-     * NEWEST FIRST
-     * ==========================================
-     */
-
-    items.sort(function(a, b) {
-
-      return new Date(b.timestamp) -
-             new Date(a.timestamp);
-
-    });
+    items.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
     return items.slice(0, 50);
   } catch (e) {
-    console.error( 'getEntryActivity failed. Entry ID: ' + entryId + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); return []; }
+    console.error( 'getEntryActivity failed. Entry ID: ' + entryId + ' | Error: ' + e.message + ' | Stack: ' + e.stack );
+    return [];
+  }
 }
 
 function logActivity(uid, un, action) {
@@ -3131,6 +3196,18 @@ function logActivity(uid, un, action) {
     console.error( 'logActivity failed. Action: ' + action + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); }
 }
 
+function logEntryEdit(uid, un, entryId, field, oldValue, newValue) {
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('ActivityLog');
+    if (!sheet) { console.error('logEntryEdit: ActivityLog sheet not found.'); return; }
+    var nextId = sheet.getLastRow();
+    sheet.appendRow([ nextId, uid, un, 'EDIT', new Date().toISOString(), entryId, field, oldValue, newValue ]);
+  } catch (e) {
+    console.error( 'logEntryEdit failed. ' + 'EntryID: ' + entryId + ' | Field: ' + field + ' | Error: ' + e.message + ' | Stack: ' + e.stack );
+  }
+}
+
 function addSystemRemark(eid, un, msg) {
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
@@ -3142,101 +3219,25 @@ function addSystemRemark(eid, un, msg) {
     console.error( 'addSystemRemark failed. Entry ID: ' + eid + ' | Error: ' + e.message + ' | Stack: ' + e.stack ); }
 }
 
-// // ========== Round-Robin DISTRIBUTION ==========
-// function distributeNewEntry(entryId) {
-//   var lock = LockService.getScriptLock();
-//   try {
-//     lock.waitLock(10000);
-//     var ss = SpreadsheetApp.openById(SHEET_ID);
-//     var agentSheet = ss.getSheetByName('Agents');
-//     var entrySheet = ss.getSheetByName('Entries');
-//     if (!agentSheet || !entrySheet) { return; }
-//     var agentData = agentSheet.getDataRange().getValues();
-//     if (agentData.length <= 1) { return; }
-//     agentData.shift();
-//     var eligibleAgents = [];
-//     for (var i = 0; i < agentData.length; i++) {
-//       var agent = agentData[i];
-//       var agentId = agent[0];
-//       var agentName = agent[3];
-//       var role = agent[7] ? agent[7].toString().trim() : '';
-//       var status = agent[8] ? agent[8].toString().trim() : '';
-//       if ( status === 'Active' && (role === 'Admin' || role === 'Sales Partner') ) {
-//         eligibleAgents.push({ id: agentId, name: agentName, role: role, rowIndex: i }); } }
-//     if (eligibleAgents.length === 0) { return; }
-//     var properties = PropertiesService.getScriptProperties();
-//     var lastAgentId = properties.getProperty('LAST_DISTRIBUTED_AGENT_ID');
-//     var nextAgentIndex = 0;
-//     if (lastAgentId !== null) {
-//       var lastIndex = -1;
-//       for (var j = 0; j < eligibleAgents.length; j++) {
-//         if (String(eligibleAgents[j].id) === String(lastAgentId)) { lastIndex = j; break; } }
-//       if (lastIndex !== -1) { nextAgentIndex = (lastIndex + 1) % eligibleAgents.length;
-//       } else {
-//         nextAgentIndex = 0; } }
-//     var selectedAgent = eligibleAgents[nextAgentIndex];
-//     var entryData = entrySheet.getDataRange().getValues();
-//     var entryFound = false;
-//     for (var k = 1; k < entryData.length; k++) {
-//       if (String(entryData[k][0]) === String(entryId)) {
-//         entrySheet.getRange(k + 1, 8).setValue(selectedAgent.id);
-//         entrySheet .getRange(k + 1, 10) .setValue(new Date().toISOString());
-//         entryFound = true; break; } }
-//     if (!entryFound) { return; }
-//     properties.setProperty( 'LAST_DISTRIBUTED_AGENT_ID', String(selectedAgent.id) );
-//     SpreadsheetApp.flush();
-//     logActivity( 0, 'System', 'Auto-assigned #' + entryId + ' to ' + selectedAgent.name );
-//     addSystemRemark( entryId, 'System', 'Lead auto-assigned to ' + selectedAgent.name );
-//   } catch (e) {
-//     console.error('Distribution error:', e);
-//   } finally {
-//     try { lock.releaseLock(); } catch (lockError) {} }
-// }
-
 // ========== ROUND-ROBIN DISTRIBUTION ==========
-
 function distributeNewEntry(entryId, excludedAgentId) {
-
   var lock = LockService.getScriptLock();
-
   try {
-
     lock.waitLock(10000);
-
     var ss = SpreadsheetApp.openById(SHEET_ID);
-
     var agentSheet = ss.getSheetByName('Agents');
     var entrySheet = ss.getSheetByName('Entries');
-
-    if (!agentSheet || !entrySheet) {
-      return;
-    }
-
+    if (!agentSheet || !entrySheet) { return; }
     var agentData = agentSheet.getDataRange().getValues();
-
-    if (agentData.length <= 1) {
-      return;
-    }
-
+    if (agentData.length <= 1) { return; }
     agentData.shift();
-
     var eligibleAgents = [];
-
     for (var i = 0; i < agentData.length; i++) {
-
       var agent = agentData[i];
-
       var agentId = agent[0];
       var agentName = agent[3];
-
-      var role = agent[7]
-        ? agent[7].toString().trim()
-        : '';
-
-      var status = agent[8]
-        ? agent[8].toString().trim()
-        : '';
-
+      var role = agent[7] ? agent[7].toString().trim() : '';
+      var status = agent[8] ? agent[8].toString().trim() : '';
       if (
         status === 'Active' &&
         (
@@ -3244,76 +3245,38 @@ function distributeNewEntry(entryId, excludedAgentId) {
           role === 'Sales Partner'
         )
       ) {
-
-        eligibleAgents.push({
-          id: agentId,
-          name: agentName,
-          role: role,
-          rowIndex: i
-        });
-
+        eligibleAgents.push({ id: agentId, name: agentName, role: role, rowIndex: i });
       }
     }
-
-    if (eligibleAgents.length === 0) {
-      return;
-    }
-
-    // ROUND-ROBIN SELECTION
-
-    var properties =
-      PropertiesService.getScriptProperties();
-
-    var lastAgentId =
-      properties.getProperty(
-        'LAST_DISTRIBUTED_AGENT_ID'
-      );
-
+    if (eligibleAgents.length === 0) { return; }
+    var properties = PropertiesService.getScriptProperties();
+    var lastAgentId = properties.getProperty( 'LAST_DISTRIBUTED_AGENT_ID' );
     var startIndex = 0;
-
     if (lastAgentId !== null) {
-
       var lastIndex = -1;
-
       for (var j = 0; j < eligibleAgents.length; j++) {
-
         if (
           String(eligibleAgents[j].id) ===
           String(lastAgentId)
         ) {
-
           lastIndex = j;
           break;
         }
       }
-
       if (lastIndex !== -1) {
-
         startIndex =
           (lastIndex + 1) %
           eligibleAgents.length;
-
       }
     }
-
     var selectedAgent = null;
-
     for (
       var offset = 0;
       offset < eligibleAgents.length;
       offset++
     ) {
-
-      var candidateIndex =
-        (startIndex + offset) %
-        eligibleAgents.length;
-
-      var candidate =
-        eligibleAgents[candidateIndex];
-
-      // Skip only the previous owner when
-      // this function was called with an
-      // excludedAgentId.
+      var candidateIndex = (startIndex + offset) % eligibleAgents.length;
+      var candidate = eligibleAgents[candidateIndex];
       if (
         excludedAgentId &&
         String(candidate.id) ===
@@ -3321,122 +3284,35 @@ function distributeNewEntry(entryId, excludedAgentId) {
       ) {
         continue;
       }
-
       selectedAgent = candidate;
       break;
     }
-
-    // ==========================================
-    // SAFETY CHECK
-    // ==========================================
-
-    if (!selectedAgent) {
-
-      console.error(
-        'No eligible agent available for entry #' +
-        entryId +
-        ' after applying exclusion.'
-      );
-
-      return;
-    }
-
-    // ==========================================
-    // FIND ENTRY
-    // ==========================================
-
-    var entryData =
-      entrySheet.getDataRange().getValues();
-
+    if (!selectedAgent) { console.error( 'No eligible agent available for entry #' + entryId + ' after applying exclusion.' ); return; }
+    var entryData = entrySheet.getDataRange().getValues();
     var entryFound = false;
-
     for (var k = 1; k < entryData.length; k++) {
-
       if (
         String(entryData[k][0]) ===
         String(entryId)
       ) {
-
-        var now =
-          new Date().toISOString();
-
-        // H = Assigned Agent
-        entrySheet
-          .getRange(k + 1, 8)
-          .setValue(selectedAgent.id);
-
-        // I = Status
-        // System-distributed leads start
-        // with No Status.
-        entrySheet
-          .getRange(k + 1, 9)
-          .setValue('');
-
-        // J = Created/Assigned At
-        entrySheet
-          .getRange(k + 1, 10)
-          .setValue(now);
-
-        // N = StatusStartedAt
-        // Start a fresh 30-day No Status timer.
-        entrySheet
-          .getRange(k + 1, 14)
-          .setValue(now);
-
+        var now = new Date().toISOString();  
+        entrySheet .getRange(k + 1, 8) .setValue(selectedAgent.id);      
+        entrySheet .getRange(k + 1, 9) .setValue('');
+        entrySheet .getRange(k + 1, 10) .setValue(now);
+        entrySheet .getRange(k + 1, 14) .setValue(now);
         entryFound = true;
-
         break;
       }
     }
-
-    if (!entryFound) {
-      return;
-    }
-
-    // ==========================================
-    // SAVE ROUND-ROBIN POSITION
-    // ==========================================
-
-    properties.setProperty(
-      'LAST_DISTRIBUTED_AGENT_ID',
-      String(selectedAgent.id)
-    );
-
+    if (!entryFound) { return; }
+    properties.setProperty( 'LAST_DISTRIBUTED_AGENT_ID', String(selectedAgent.id) );
     SpreadsheetApp.flush();
-
-    // ==========================================
-    // LOG
-    // ==========================================
-
-    logActivity(
-      0,
-      'System',
-      'Auto-assigned #' +
-      entryId +
-      ' to ' +
-      selectedAgent.name
-    );
-
-    addSystemRemark(
-      entryId,
-      'System',
-      'Lead auto-assigned to ' +
-      selectedAgent.name
-    );
-
+    logActivity( 0, 'System', 'Auto-assigned #' + entryId + ' to ' + selectedAgent.name );
+    addSystemRemark( entryId, 'System', 'Lead auto-assigned to ' + selectedAgent.name );
   } catch (e) {
-
-    console.error(
-      'Distribution error:',
-      e
-    );
-
+    console.error( 'Distribution error:', e );
   } finally {
-
-    try {
-      lock.releaseLock();
-    } catch (lockError) {}
-
+    try { lock.releaseLock(); } catch (lockError) {}
   }
 }
 

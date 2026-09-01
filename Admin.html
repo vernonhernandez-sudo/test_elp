@@ -92,13 +92,14 @@
     <div class="table-wrapper">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr style="position:sticky;top:0;z-index:2;background:#f8f9fb;">
+          <th style="padding:9px 8px;font-weight:600;color:#555;border-bottom:2px solid #e8e8ec;font-size:12px;width:48px;">#</th>
           <th style="padding:9px 12px;font-weight:600;color:#555;border-bottom:2px solid #e8e8ec;font-size:12px;"><div style="display:flex;align-items:center;justify-content:center;gap:6px;">Author<button class="filter-btn" onclick="return toggleFilterDropdown(event,'author')">▼</button></div><div id="filterDropdown-author" class="dropdown-content"><div style="padding:8px;"><input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions(this,'author')" style="width:100%;padding:6px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;box-sizing:border-box;"></div><div class="filter-options-list" style="max-height:180px;overflow-y:auto;"></div></div></th>
           <th style="padding:9px 12px;font-weight:600;color:#555;border-bottom:2px solid #e8e8ec;font-size:12px;"><div style="display:flex;align-items:center;justify-content:center;gap:6px;">Book<button class="filter-btn" onclick="return toggleFilterDropdown(event,'book')">▼</button></div><div id="filterDropdown-book" class="dropdown-content"><div style="padding:8px;"><input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions(this,'book')" style="width:100%;padding:6px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;box-sizing:border-box;"></div><div class="filter-options-list" style="max-height:180px;overflow-y:auto;"></div></div></th>
           <th style="padding:9px 12px;font-weight:600;color:#555;border-bottom:2px solid #e8e8ec;font-size:12px;">ISBN</th>
           <th style="padding:9px 12px;font-weight:600;color:#555;border-bottom:2px solid #e8e8ec;font-size:12px;">Agent</th>
           <th style="padding:9px 12px;font-weight:600;color:#555;border-bottom:2px solid #e8e8ec;font-size:12px;"><div style="display:flex;align-items:center;justify-content:center;gap:6px;">Status<button class="filter-btn" onclick="return toggleFilterDropdown(event,'status')">▼</button></div><div id="filterDropdown-status" class="dropdown-content"><div style="padding:8px;"><input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions(this,'status')" style="width:100%;padding:6px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;box-sizing:border-box;"></div><div class="filter-options-list" style="max-height:180px;overflow-y:auto;"></div></div></th>
         </tr></thead>
-        <tbody id="entriesTableBody"><tr><td colspan="5" style="padding:60px;text-align:center;color:#aaa;">Loading entries...</td></tr></tbody>
+        <tbody id="entriesTableBody"><tr><td colspan="6" style="padding:60px;text-align:center;color:#aaa;">Loading entries...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -137,7 +138,7 @@
         <div id="remarksList" style="margin-bottom:14px;"></div>
         <div style="display:flex;gap:8px;">
           <input type="text" id="remarkInput" placeholder="Add a remark..." style="flex:1;padding:9px;border:1.5px solid #d4c5a9;border-radius:8px;font-size:12px;">
-          <button onclick="addRemark()" style="padding:9px 14px;background:#5d4e37;color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;">Add</button>
+          <button id="remarkAddBtn" onclick="addRemark()" style="padding:9px 14px;background:#5d4e37;color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;">Add</button>
         </div>
       </div>
     </div>

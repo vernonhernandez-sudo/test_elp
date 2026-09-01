@@ -874,7 +874,7 @@ var columnFilters = {};
 
 // Load Entries
 function loadEntries(callback) { if (!SESSION_ID) return;
-  document.getElementById('entriesTableBody').innerHTML = '<tr><td colspan="5" style="padding:60px;text-align:center;color:#aaa;">Loading...</td></tr>';
+  document.getElementById('entriesTableBody').innerHTML = '<tr><td colspan="6" style="padding:60px;text-align:center;color:#aaa;">Loading...</td></tr>';
   google.script.run .withSuccessHandler(function(r) {
       if (r && r.success) {
         allEntries = r.entries.slice().reverse();
@@ -1121,18 +1121,45 @@ function saveEntryEdits() {
   if (!selectedEntryId) return;
 
   var entryId = selectedEntryId;
+  var saveButton = document.getElementById('saveEditBtn');
 
-  google.script.run .withSuccessHandler(function(r) {
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.dataset.originalText = saveButton.textContent;
+    saveButton.textContent = 'Saving...';
+    saveButton.style.opacity = '0.7';
+    saveButton.style.cursor = 'wait';
+  }
+
+  function resetSaveButton() {
+    if (!saveButton) return;
+
+    saveButton.disabled = false;
+    saveButton.textContent = saveButton.dataset.originalText || 'Save';
+    saveButton.style.opacity = '1';
+    saveButton.style.cursor = 'pointer';
+  }
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      resetSaveButton();
 
       if (r && r.success) {
-
         showToast('Updated!', 'success');
         setViewMode();
         loadEntries(function() { selectEntry(entryId); });
       } else {
-        showToast( (r && r.message) || 'Unable to update the entry.', 'error' ); } })
-    .withFailureHandler(function(error) { console.error('saveEntryEdits failed:', error);
-      showToast( 'Unable to update the entry. Please try again.', 'error' ); })
+        showToast(
+          (r && r.message) || 'Unable to update the entry.',
+          'error'
+        );
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('saveEntryEdits failed:', error);
+      resetSaveButton();
+      showToast('Unable to update the entry. Please try again.', 'error');
+    })
     .updateEntry(SESSION_ID, entryId, {
       authorName: document.getElementById('detailAuthorNameEdit').value.trim(),
       phones: document.getElementById('detailPhonesEdit').value.trim(),
